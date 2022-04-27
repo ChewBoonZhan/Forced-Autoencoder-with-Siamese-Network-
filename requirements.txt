@@ -1,0 +1,11 @@
+torch
+torchvision
+numpy
+tqdm
+matplotlib
+random2
+opencv-python
+keras-datasets
+scikit-learn
+pandas
+pickle5
