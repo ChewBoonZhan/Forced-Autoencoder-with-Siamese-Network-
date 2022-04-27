@@ -16,6 +16,7 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 import math
 from sklearn.metrics import roc_auc_score, roc_curve
+import csv
 
 ####################################################################
 # Import local functions for preprocessing
@@ -2744,6 +2745,106 @@ plt.legend()
 plt.savefig(os.getcwd() + "/Results/Train1/Method_2_AUROC/first_autoencoder_novel_AUROC.png")
 
 #####################################################################
+# Saving data to CSV
+csv_header = [
+              " ",
+              " ",
+              "Exp Variant 1 Accuracy", 
+              "Exp Variant 2 Accuracy", 
+              "Exp Variant 3 Accuracy", 
+              "Exp Variant 4 Accuracy", 
+              "Exp Variant 5 Accuracy", 
+              "Exp Variant 6 Accuracy", 
+              "Exp Variant 7 Accuracy", 
+              "Exp Variant 8 Accuracy", 
+              "Exp Variant 9 Accuracy", 
+              "Exp Variant 10 Accuracy", 
+
+              "Exp Variant 1 AUROC", 
+              "Exp Variant 2 AUROC", 
+              "Exp Variant 3 AUROC", 
+              "Exp Variant 4 AUROC", 
+              "Exp Variant 5 AUROC", 
+              "Exp Variant 6 AUROC", 
+              "Exp Variant 7 AUROC", 
+              "Exp Variant 8 AUROC", 
+              "Exp Variant 9 AUROC", 
+              "Exp Variant 10 AUROC"
+            ]
+outcsv = os.getcwd() + "/Results/FYP_compare.csv"
+if not os.path.exists(outcsv):
+    with open(outcsv, 'w', newline='') as file:
+      writer = csv.writer(file)
+      writer.writerow(csv_header)
+
+insertData = []
+
+rowsCsv = []
+
+rowsCsv.append("Train 1")
+rowsCsv.append("Method 1")
+rowsCsv.append(variant1Accuracy)  
+rowsCsv.append(variant2Accuracy)  
+rowsCsv.append(variant3Accuracy)  
+rowsCsv.append(variant4Accuracy)  
+rowsCsv.append(variant5Accuracy)  
+rowsCsv.append(variant6Accuracy)  
+rowsCsv.append(variant7Accuracy)  
+rowsCsv.append(variant8Accuracy)  
+rowsCsv.append(variant9Accuracy)  
+rowsCsv.append(variant10Accuracy)  
+
+rowsCsv.append(variant1AUROC)
+rowsCsv.append(variant2AUROC)
+rowsCsv.append(variant3AUROC)
+rowsCsv.append(variant4AUROC)
+rowsCsv.append(variant5AUROC)
+rowsCsv.append(variant6AUROC)
+rowsCsv.append(variant7AUROC)
+rowsCsv.append(variant8AUROC)
+rowsCsv.append(variant9AUROC)
+rowsCsv.append(variant10AUROC)
+
+insertData.append(rowsCsv)
+rowsCsv = []
+
+rowsCsv.append("Train 1")
+rowsCsv.append("Method 2")
+
+rowsCsv.append(variant1NovelAccuracy)  
+rowsCsv.append(variant2NovelAccuracy)  
+rowsCsv.append(variant3NovelAccuracy)  
+rowsCsv.append(variant4NovelAccuracy)  
+rowsCsv.append(variant5NovelAccuracy)  
+rowsCsv.append(variant6NovelAccuracy)  
+rowsCsv.append(variant7NovelAccuracy)  
+rowsCsv.append(variant8NovelAccuracy)  
+rowsCsv.append(variant9NovelAccuracy)  
+rowsCsv.append(variant10NovelAccuracy)  
+
+rowsCsv.append(variant1NovelAUROC)
+rowsCsv.append(variant2NovelAUROC)
+rowsCsv.append(variant3NovelAUROC)
+rowsCsv.append(variant4NovelAUROC)
+rowsCsv.append(variant5NovelAUROC)
+rowsCsv.append(variant6NovelAUROC)
+rowsCsv.append(variant7NovelAUROC)
+rowsCsv.append(variant8NovelAUROC)
+rowsCsv.append(variant9NovelAUROC)
+rowsCsv.append(variant10NovelAUROC)
+
+
+insertData.append(rowsCsv)
+
+with open(outcsv, 'a', newline='', encoding='UTF8') as fileCsv:
+  writer = csv.writer(fileCsv)
+
+  writer.writerows(insertData)
+
+
+
+
+#####################################################################
 # Redefining parameter for retraining 
 print("\nRetraining autoencoder\n")
 novelClassCollection = [4, 5, 6]
@@ -5238,6 +5339,73 @@ plt.plot(variant9FPR, variant9TPR, label = "Variant 9")
 plt.plot(variant10FPR, variant10TPR, label = "Variant 10")
 plt.legend()
 plt.savefig(os.getcwd() + "/Results/Train2/Method_2_AUROC/first_autoencoder_novel_AUROC.png")
+
+#####################################################################
+# Save data to CSV file
+
+insertData = []
+
+rowsCsv = []
+
+rowsCsv.append("Train 2")
+rowsCsv.append("Method 1")
+rowsCsv.append(variant1Accuracy)  
+rowsCsv.append(variant2Accuracy)  
+rowsCsv.append(variant3Accuracy)  
+rowsCsv.append(variant4Accuracy)  
+rowsCsv.append(variant5Accuracy)  
+rowsCsv.append(variant6Accuracy)  
+rowsCsv.append(variant7Accuracy)  
+rowsCsv.append(variant8Accuracy)  
+rowsCsv.append(variant9Accuracy)  
+rowsCsv.append(variant10Accuracy)  
+
+rowsCsv.append(variant1AUROC)
+rowsCsv.append(variant2AUROC)
+rowsCsv.append(variant3AUROC)
+rowsCsv.append(variant4AUROC)
+rowsCsv.append(variant5AUROC)
+rowsCsv.append(variant6AUROC)
+rowsCsv.append(variant7AUROC)
+rowsCsv.append(variant8AUROC)
+rowsCsv.append(variant9AUROC)
+rowsCsv.append(variant10AUROC)
+
+insertData.append(rowsCsv)
+rowsCsv = []
+
+rowsCsv.append("Train 2")
+rowsCsv.append("Method 2")
+
+rowsCsv.append(variant1NovelAccuracy)  
+rowsCsv.append(variant2NovelAccuracy)  
+rowsCsv.append(variant3NovelAccuracy)  
+rowsCsv.append(variant4NovelAccuracy)  
+rowsCsv.append(variant5NovelAccuracy)  
+rowsCsv.append(variant6NovelAccuracy)  
+rowsCsv.append(variant7NovelAccuracy)  
+rowsCsv.append(variant8NovelAccuracy)  
+rowsCsv.append(variant9NovelAccuracy)  
+rowsCsv.append(variant10NovelAccuracy)  
+
+rowsCsv.append(variant1NovelAUROC)
+rowsCsv.append(variant2NovelAUROC)
+rowsCsv.append(variant3NovelAUROC)
+rowsCsv.append(variant4NovelAUROC)
+rowsCsv.append(variant5NovelAUROC)
+rowsCsv.append(variant6NovelAUROC)
+rowsCsv.append(variant7NovelAUROC)
+rowsCsv.append(variant8NovelAUROC)
+rowsCsv.append(variant9NovelAUROC)
+rowsCsv.append(variant10NovelAUROC)
+
+
+insertData.append(rowsCsv)
+
+with open(outcsv, 'a', newline='', encoding='UTF8') as fileCsv:
+  writer = csv.writer(fileCsv)
+
+  writer.writerows(insertData)
 
 print("Done")
 
