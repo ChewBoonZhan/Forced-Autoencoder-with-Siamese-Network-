@@ -159,8 +159,20 @@ from keras.datasets import mnist
 
 #####################################################################
 # Processing dataset for later use
+
+# Testing dataset, contains all labels except for actual novel
+print("\nProcessing Testing dataset 1, contains novel and non-novel labels")
+test_loader_no_actual, test_label_no_actual = processImage(test_X, 
+                                       test_Y, 
+                                       removeNovel = False,
+                                       removeActualNovel = True, 
+                                       novelClassCollection = novelClassCollection,
+                                       actualNovelClass = actualNovelClass,
+                                       classToUse = classToUse
+                                       )
+
 # Testing dataset, contains all labels
-print("\nProcessing Testing dataset, contains all labels, ie actual, novel and non-novel labels")
+print("\nProcessing Testing dataset 2, contains all labels, ie actual, novel and non-novel labels")
 test_loader, test_label = processImage(test_X, 
                                        test_Y, 
                                        removeNovel = False,
@@ -170,8 +182,10 @@ test_loader, test_label = processImage(test_X,
                                        classToUse = classToUse
                                        )
 
+
+
 # Training dataset for autoencoder, contains non-novel label only
-print("\nProcessing Train dataset, contains non-novel labels")
+print("\nProcessing Train dataset 1, contains non-novel labels")
 trainData, trainLabel = processImage(train_X, 
                                      train_Y, 
                                      removeNovel = True,
@@ -182,7 +196,7 @@ trainData, trainLabel = processImage(train_X,
                                     )
 
 # Training dataset for Siamese Network, contains novel label and non-novel label. Does not have actual novel label
-print("\nProcessing Train dataset, contains novel and non-novel labels")
+print("\nProcessing Train dataset 2, contains novel and non-novel labels")
 trainOtherData, trainOtherLabel = processImage(train_X, 
                                                train_Y, 
                                                removeNovel = False,
@@ -194,7 +208,7 @@ trainOtherData, trainOtherLabel = processImage(train_X,
 
 #####################################################################
 # Convert data into tensor
-# Test Data
+# Test Data for method 2
 test_loader = torch.tensor(test_loader)
 test_label = torch.tensor(test_label)
 
@@ -206,6 +220,10 @@ trainLabel = torch.tensor(trainLabel)
 trainOtherData = torch.tensor(trainOtherData)
 trainOtherLabel = torch.tensor(trainOtherLabel)
 
+# Test data for method 1
+test_loader_no_actual = torch.tensor(test_loader_no_actual)
+test_label_no_actual = torch.tensor(test_label_no_actual)
+
 #####################################################################
 # Convert tensor into tensor dataset
 
@@ -215,8 +233,11 @@ trainData2 = TensorDataset(trainData, trainLabel)
 # Train data for Siamese Network
 trainOtherData = TensorDataset(trainOtherData, trainOtherLabel)
 
-# Test Data
+# Test Data for Method 2
 test_loader = TensorDataset(test_loader, test_label)
+
+# Test Data for Method 2
+test_loader_no_actual= TensorDataset(test_loader_no_actual, test_label_no_actual)
 
 #####################################################################
 # Convert tensor dataset into Dataloader, make them into batch sizes, and shuffle
@@ -236,11 +257,11 @@ train_loader = DeviceDataLoader(train_loader, device)
 # Train data for Siamese Network
 train_other_loader = DeviceDataLoader(train_other_loader, device)
 
-# Test data with actual novel label, novel label and non-novel label
+# Test data with actual novel label, novel label and non-novel label - method 1
 test_loader = DeviceDataLoader(test_loader, device)
 
-# Test data with novel label and non-novel label
-test_TrainOtherData = DeviceDataLoader(trainOtherData, device) 
+# Test data with novel label and non-novel label - method 2
+test_loader_no_actual= DeviceDataLoader(test_loader_no_actual, device)
 
 #####################################################################
 # get knnImage and knnLabel
@@ -422,6 +443,12 @@ encoderOp3 = torch.optim.Adam(encoderNet3.parameters(), lr=learning_rate)
 decoderNet3 = decoder(latent_space_features, number_of_conv_final_channel, conv_image_size, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
 decoderOp3 = torch.optim.Adam(decoderNet3.parameters(), lr=learning_rate)
 
+encoderNet4 = encoder(number_of_conv_final_channel, latent_space_features, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
+encoderOp4 = torch.optim.Adam(encoderNet4.parameters(), lr=learning_rate)
+
+decoderNet4 = decoder(latent_space_features, number_of_conv_final_channel, conv_image_size, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
+decoderOp4 = torch.optim.Adam(decoderNet4.parameters(), lr=learning_rate)
+
 # Supervised Force Autoencoder COllection
 encoderNet_supervised = encoder(number_of_conv_final_channel, latent_space_features, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
 encoderOp_supervised = torch.optim.Adam(encoderNet_supervised.parameters(), lr=learning_rate)
@@ -470,9 +497,7 @@ else:
         lossAutoencoder.backward()
         encoderOp0.step()
         decoderOp0.step()
-        
 
-    
     print('\nEpoch {}: Autoencoder Loss {}'.format(epoch, lossAutoencoder))   
 
   # saving model
@@ -496,7 +521,7 @@ for data in trainData2:
 numberOfClusters3 = 4
 
 print("\nTraining KNN for variant 5 Autoencoder using latent space from normal autoencoder\n")
-knnModel3 = KMeans(n_clusters=numberOfClusters)
+knnModel3 = KMeans(n_clusters=numberOfClusters3)
 
 knnModel3.fit(outputEncoderCollectionKNN)
 
@@ -568,7 +593,7 @@ for index in range(numberOfClusters3):
     counter = counter + 1
 
 #####################################################################
-# Get average latent space of autoencoder for training
+# Get average latent space of autoencoder for training Variant 3 autoencoder
 encoderAutoencoderCollection = {
     0:[],
     1:[],
@@ -613,6 +638,9 @@ if(os.path.exists(os.getcwd() + "/Data/normalEncoder.pth") and
     os.path.exists(os.getcwd() + "/Data/variant5Encoder.pth") and 
     os.path.exists(os.getcwd() + "/Data/variant5Decoder.pth") and 
 
+    os.path.exists(os.getcwd() + "/Data/variant6Encoder.pth") and 
+    os.path.exists(os.getcwd() + "/Data/variant6Decoder.pth") and 
+
     os.path.exists(os.getcwd() + "/Data/variant2Encoder.pth") and 
     os.path.exists(os.getcwd() + "/Data/variant2Decoder.pth") and 
 
@@ -628,6 +656,9 @@ if(os.path.exists(os.getcwd() + "/Data/normalEncoder.pth") and
 
   encoderNet3.load_state_dict(torch.load(os.getcwd() + "/Data/variant5Encoder.pth", map_location=device))
   decoderNet3.load_state_dict(torch.load(os.getcwd() + "/Data/variant5Decoder.pth", map_location=device))
+
+  encoderNet4.load_state_dict(torch.load(os.getcwd() + "/Data/variant6Encoder.pth", map_location=device))
+  decoderNet4.load_state_dict(torch.load(os.getcwd() + "/Data/variant6Decoder.pth", map_location=device))
 
   encoderNet_supervised.load_state_dict(torch.load(os.getcwd() + "/Data/variant2Encoder.pth", map_location=device))
   decoderNet_supervised.load_state_dict(torch.load(os.getcwd() + "/Data/variant2Decoder.pth", map_location=device))
@@ -654,6 +685,9 @@ else:
 
         encoderNet3.train()
         decoderNet3.train()
+
+        encoderNet4.train()
+        decoderNet4.train()
 
         encoderNet_supervised.train()
         decoderNet_supervised.train()
@@ -737,6 +771,33 @@ else:
         lossDecoder_variant5.backward()
         decoderOp3.step()
 
+        # Train the new autoencoder variant 6
+        labelsCollection = generateLabelRepresentation(imgs, encoderNet0, knnModel3)
+        
+        encoderRepresentation = getEncoderLatentCollection(labelsCollection, encoderLatentCollection, device)  # change here
+
+        imageCollection = getImageForEncoderCollection2(labelsCollection, autoencoderTrainImage2, device)
+
+        outEncoder = encoderNet4(imgs)
+
+        lossEncoder_variant6 = nn.functional.mse_loss(outEncoder, encoderRepresentation)
+        
+        encoderOp4.zero_grad()
+        lossEncoder_variant6.backward()
+        encoderOp4.step()
+
+        ## retrain the decoder with fixed latent representation
+        outEncoder = encoderNet4(imgs)
+        outEncoder = outEncoder.detach()
+
+        outDecoder = decoderNet4(outEncoder)
+        imagesCompare = ((0.9 * imageCollection) + (0.1 * imgs)).clamp(0.0,1.0)
+        lossDecoder_variant6 = nn.functional.mse_loss(outDecoder, imagesCompare)
+        
+        decoderOp4.zero_grad()
+        lossDecoder_variant6.backward()
+        decoderOp4.step()
+
 
         ############ train supervised autoencoder
         # variant 2
@@ -744,48 +805,48 @@ else:
         encoderRepresentation = getEncoderLatentCollection_supervised(actualLabel, familiarClass, encoderLatentCollection, device)
         imagesCompare = getImageCollectionLabelTrain(actualLabel, train_other_loaderClass, imageCollectionForIndex, device).float()
 
-        outEncoder = encoderNet2_supervised(imgs)
+        outEncoder = encoderNet_supervised(imgs)
 
         lossEncoder_variant2 = nn.functional.mse_loss(outEncoder, encoderRepresentation)
         
-        encoderOp2_supervised.zero_grad()
+        encoderOp_supervised.zero_grad()
         lossEncoder_variant2.backward()
-        encoderOp2_supervised.step()
+        encoderOp_supervised.step()
 
         ## retrain the decoder with fixed latent representation
-        outEncoder = encoderNet2_supervised(imgs)
+        outEncoder = encoderNet_supervised(imgs)
         outEncoder = outEncoder.detach()
 
-        outDecoder = decoderNet2_supervised(outEncoder)
+        outDecoder = decoderNet_supervised(outEncoder)
         imagesCompare = ((0.9 * imagesCompare) + (0.1 * imgs)).clamp(0.0,1.0)
         lossDecoder_variant2 = nn.functional.mse_loss(outDecoder, imagesCompare)
         
-        decoderOp2_supervised.zero_grad()
+        decoderOp_supervised.zero_grad()
         lossDecoder_variant2.backward()
-        decoderOp2_supervised.step()
+        decoderOp_supervised.step()
 
 
         # Train the autoencoder variant 3 - use latent space from autoencoder averaged
         encoderRepresentation = getAutoencoderEncoderRepresentation_supervised(actualLabel, familiarClass, encoderAutoencoderRepresentation, device)
 
-        outEncoder = encoderNet_supervised(imgs)
+        outEncoder = encoderNet2_supervised(imgs)
         lossEncoder_variant3 = nn.functional.mse_loss(outEncoder, encoderRepresentation)
 
-        encoderOp_supervised.zero_grad()
+        encoderOp2_supervised.zero_grad()
         lossEncoder_variant3.backward()
-        encoderOp_supervised.step()
+        encoderOp2_supervised.step()
 
 
-        outEncoder = encoderNet_supervised(imgs)
+        outEncoder = encoderNet2_supervised(imgs)
         outEncoder = outEncoder.detach()
-        outDecoder = decoderNet_supervised(outEncoder)
+        outDecoder = decoderNet2_supervised(outEncoder)
 
         imagesCompare = ((0.9 * imagesCompare) + (0.1 * imgs)).clamp(0.0,1.0)
         lossDecoder_variant3 = nn.functional.mse_loss(outDecoder, imagesCompare)
 
-        decoderOp_supervised.zero_grad()
+        decoderOp2_supervised.zero_grad()
         lossDecoder_variant3.backward()
-        decoderOp_supervised.step()
+        decoderOp2_supervised.step()
 
 
 
@@ -802,6 +863,11 @@ else:
 
     print('Epoch {}: Variant 5 Encoder Loss {}'.format(epoch, lossEncoder_variant5))
     print('Epoch {}: Variant 5 Decoder Loss {}'.format(epoch, lossDecoder_variant5))
+
+    print('Epoch {}: Variant 6 Encoder Loss {}'.format(epoch, lossEncoder_variant6))
+    print('Epoch {}: Variant 6 Decoder Loss {}'.format(epoch, lossDecoder_variant6))
+
+
   
   # saving model
   torch.save(encoderNet.state_dict(), os.getcwd() + "/Data/normalEncoder.pth")
@@ -812,6 +878,9 @@ else:
 
   torch.save(encoderNet3.state_dict(), os.getcwd() + "/Data/variant5Encoder.pth")
   torch.save(decoderNet3.state_dict(), os.getcwd() + "/Data/variant5Decoder.pth")
+
+  torch.save(encoderNet4.state_dict(), os.getcwd() + "/Data/variant6Encoder.pth")
+  torch.save(decoderNet4.state_dict(), os.getcwd() + "/Data/variant6Decoder.pth")
 
   torch.save(encoderNet_supervised.state_dict(), os.getcwd() + "/Data/variant2Encoder.pth")
   torch.save(decoderNet_supervised.state_dict(), os.getcwd() + "/Data/variant2Decoder.pth")
@@ -1063,6 +1132,54 @@ if(not os.path.isdir(os.getcwd() + "/Results/Train1/Variant_"+autoencoderVariant
   os.mkdir(os.getcwd() + "/Results/Train1/Variant_"+autoencoderVariant+"_Autoencoder/")
 cv2.imwrite(os.getcwd() + "/Results/Train1/Variant_"+autoencoderVariant+"_Autoencoder/results.png", finalImageCollection*255)
 
+#####################################################################
+# Save Variant 6 Autoencoder Input and Output Image in directory for comparision
+print("\nSave Variant 6 Autoencoder Input and Output Image in directory for comparision\n")
+imageLoopStart = 10
+numberOfCompareImage = 10
+autoencoderVariant = "6"
+finalImageCollection = np.array([])
+for index in range(10):
+  imageLabel = index
+  finalImage = np.array([])
+  with torch.no_grad():
+    for imageCompareIndex in range(numberOfCompareImage):
+
+      image= getImageLabel2(imageLabel, imageCompareIndex + imageLoopStart, test_loader).to(device)
+
+
+      encoderNet4.eval()
+      decoderNet4.eval()
+          
+      outputModelIn = image.unsqueeze(0).float().to(device)
+
+      outputEncoderModel = encoderNet4(outputModelIn)
+      outputModel = decoderNet4(outputEncoderModel)
+
+      outputModelShow = outputModel.squeeze(0)
+      imageCompare = image.squeeze(0)
+
+      producedImage = torch.cat((image.to("cpu"), outputModelShow.to("cpu")),2)
+
+      producedImage = producedImage.to("cpu").detach().squeeze(0).squeeze(0).numpy()  
+
+      if(finalImage.shape == np.array([]).shape):
+        finalImage = producedImage
+      else:
+        finalImage = cv2.vconcat([finalImage, producedImage])
+      paddingImage = np.zeros((30, producedImage.shape[1]))
+      finalImage = cv2.vconcat([finalImage, paddingImage])
+
+    if(finalImageCollection.shape == np.array([]).shape):
+      finalImageCollection = finalImage
+    else:
+      finalImageCollection = cv2.hconcat([finalImageCollection, finalImage])
+    paddingImage = np.ones((finalImageCollection.shape[0], 20))
+    finalImageCollection = cv2.hconcat([finalImageCollection, paddingImage])
+if(not os.path.isdir(os.getcwd() + "/Results/Train1/Variant_"+autoencoderVariant+"_Autoencoder") ):
+  os.mkdir(os.getcwd() + "/Results/Train1/Variant_"+autoencoderVariant+"_Autoencoder/")
+cv2.imwrite(os.getcwd() + "/Results/Train1/Variant_"+autoencoderVariant+"_Autoencoder/results.png", finalImageCollection*255)
+
 
 #####################################################################
 # Define Siamese Network and Contrastive Loss for training
@@ -1075,70 +1192,74 @@ novelOptimizerSupervised = torch.optim.Adam(novelSupervised.parameters(), lr=lea
 lossFunction1 = ContrastiveLoss()
 
 
-#####################################################################
-# Training/Loading Siamese Network using Contrastive Loss
-# if(os.path.exists(os.getcwd() + "/Data/siameseVariant2.pth") and 
-#     os.path.exists(os.getcwd() + "/Data/siameseVariant1.pth")):
-#   print("\nLoading Siamese Network\n")
-#   novelKNN.load_state_dict(torch.load(os.getcwd() + "/Data/siameseVariant2.pth", map_location=device))
-#   novelSupervised.load_state_dict(torch.load(os.getcwd() + "/Data/siameseVariant1.pth", map_location=device))
-# else:
-#   print("\nTraining Siamese Network\n")
+# #####################################################################
+# # Training/Loading Siamese Network using Contrastive Loss
+if(os.path.exists(os.getcwd() + "/Data/siameseVariant2.pth") and 
+    os.path.exists(os.getcwd() + "/Data/siameseVariant1.pth")):
+  print("\nLoading Siamese Network\n")
+  novelKNN.load_state_dict(torch.load(os.getcwd() + "/Data/siameseVariant2.pth", map_location=device))
+  novelSupervised.load_state_dict(torch.load(os.getcwd() + "/Data/siameseVariant1.pth", map_location=device))
+else:
+  print("\nTraining Siamese Network\n")
     
-#   num_epochs = 30
+  num_epochs = 30
 
-#   novel_loss = []
-#   novel_loss2 = []
+  novel_loss = []
+  novel_loss2 = []
 
 
-#   for epoch in tqdm(range(0, num_epochs), desc ="Training Siamese Network"):
+  for epoch in tqdm(range(0, num_epochs), desc ="Training Siamese Network"):
     
-#     for idx, data in enumerate(train_other_loader, 0):
+    for idx, data in enumerate(train_other_loader, 0):
 
-#         novelKNN.train()
+        novelKNN.train()
 
-#         novelSupervised.train()
+        novelSupervised.train()
 
-#         imgs, actualLabel = data
-#         imgs = imgs.float()
+        imgs, actualLabel = data
+        imgs = imgs.float()
 
-#         ## Train KNN siamese network
+        ## Train KNN siamese network
 
-#         imgsTrain1, imgsTrain2, labelTrain = genImageLabelDataset(imgs, knnModel2, noveltyTrainImage, numberOfClusters2, device)
+        imgsTrain1, imgsTrain2, labelTrain = genImageLabelDataset(imgs, knnModel2, noveltyTrainImage, numberOfClusters2, device)
 
-#         labelTrain = labelTrain.unsqueeze(0).permute(1,0).float().to(device)
+        labelTrain = labelTrain.unsqueeze(0).permute(1,0).float().to(device)
         
-#         out1, out2 = novelKNN(imgsTrain1,imgsTrain2)
+        out1, out2 = novelKNN(imgsTrain1,imgsTrain2)
 
-#         lossKNN = lossFunction1(out1, out2, labelTrain)
+        lossKNN = lossFunction1(out1, out2, labelTrain)
 
-#         novelOptimizerKNN.zero_grad()
-#         lossKNN.backward()
-#         novelOptimizerKNN.step()
+        novelOptimizerKNN.zero_grad()
+        lossKNN.backward()
+        novelOptimizerKNN.step()
 
-#         ## Train supervised siamese network
+        ## Train supervised siamese network
 
-#         imgsTrain1, imgsTrain2, labelTrain = genImageLabelDataset_supervised(imgs, actualLabel, device, imageCollectionForAllIndex, train_other_loaderClass)
+        imgsTrain1, imgsTrain2, labelTrain = genImageLabelDataset_supervised(imgs, actualLabel, device, imageCollectionForAllIndex, train_other_loaderClass)
 
-#         labelTrain = labelTrain.unsqueeze(0).permute(1,0).float().to(device)
+        labelTrain = labelTrain.unsqueeze(0).permute(1,0).float().to(device)
         
-#         out1, out2 = novelSupervised(imgsTrain1,imgsTrain2)
+        out1, out2 = novelSupervised(imgsTrain1,imgsTrain2)
 
-#         lossSupervised = lossFunction1(out1, out2, labelTrain)
+        lossSupervised = lossFunction1(out1, out2, labelTrain)
 
-#         novelOptimizerSupervised.zero_grad()
-#         lossSupervised.backward()
-#         novelOptimizerSupervised.step()
+        novelOptimizerSupervised.zero_grad()
+        lossSupervised.backward()
+        novelOptimizerSupervised.step()
 
 
-#     print('Epoch {}: Loss for Siamese KNN {}'.format(epoch, lossKNN))
-#     print('Epoch {}: Loss for SIamese sup {}'.format(epoch, lossSupervised))
+    print('Epoch {}: Loss for Siamese KNN {}'.format(epoch, lossKNN))
+    print('Epoch {}: Loss for SIamese sup {}'.format(epoch, lossSupervised))
+
+  # save models
+  torch.save(novelKNN.state_dict(), os.getcwd() + "/Data/siameseVariant2.pth")
+  torch.save(novelSupervised.state_dict(), os.getcwd() + "/Data/siameseVariant1.pth")
 
 #####################################################################
 # Check accuracy of network (Method 1)
 # Dataset to check accuracy consist of non-novel label, novel label and actual novel label
 
-# Variant 1 Autoencoder
+# A1S1
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -1167,12 +1288,12 @@ with torch.no_grad():
 
     totalElements = totalElements + 1
 
-  variant1Accuracy = correctElements/totalElements * 100
+  A1S1Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 1 Accuracy: %f"%variant1Accuracy)
+  print("Method 1 A1S1 Accuracy: %f"%A1S1Accuracy)
 
 
-# Variant 2
+# A1S2
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -1203,11 +1324,11 @@ with torch.no_grad():
 
 
 
-  variant2Accuracy = correctElements/totalElements * 100
+  A1S2Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 2 Accuracy: %f"%variant2Accuracy)
+  print("Method 1 A1S2 Accuracy: %f"%A1S2Accuracy)
 
-# Variant 3
+# A2S1
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -1236,11 +1357,11 @@ with torch.no_grad():
 
     totalElements = totalElements + 1
 
-  variant3Accuracy = correctElements/totalElements * 100
+  A2S1Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 3 Accuracy: %f"%variant3Accuracy)
+  print("Method 1 A2S1 Accuracy: %f"%A2S1Accuracy)
 
-# Variant 4
+# A2S2
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -1271,11 +1392,11 @@ with torch.no_grad():
 
 
 
-  variant4Accuracy = correctElements/totalElements * 100
+  A2S2Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 4 Accuracy: %f"%variant4Accuracy)
+  print("Method 1 A2S2 Accuracy: %f"%A2S2Accuracy)
 
-# Variant 5
+# A3S1
 
 with torch.no_grad():
   totalElements = 0
@@ -1307,11 +1428,11 @@ with torch.no_grad():
 
 
 
-  variant5Accuracy = correctElements/totalElements * 100
+  A3S1Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 5 Accuracy: %f"%variant5Accuracy)
+  print("Method 1 A3S1 Accuracy: %f"%A3S1Accuracy)
 
-# Variant 6
+# A3S2
 
 with torch.no_grad():
   totalElements = 0
@@ -1343,11 +1464,11 @@ with torch.no_grad():
 
 
 
-  variant6Accuracy = correctElements/totalElements * 100
+  A3S2Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 6 Accuracy: %f"%variant6Accuracy)
+  print("Method 1 A3S2 Accuracy: %f"%A3S2Accuracy)
 
-# Variant 7
+# A4S1
 
 with torch.no_grad():
   totalElements = 0
@@ -1379,12 +1500,12 @@ with torch.no_grad():
 
 
 
-  variant7Accuracy = correctElements/totalElements * 100
+  A4S1Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 7 Accuracy: %f"%variant7Accuracy)
+  print("Method 1 A4S1 Accuracy: %f"%A4S1Accuracy)
 
 
-# Variant 8
+# A4S2
 
 with torch.no_grad():
   totalElements = 0
@@ -1416,12 +1537,12 @@ with torch.no_grad():
 
 
 
-  variant8Accuracy = correctElements/totalElements * 100
+  A4S2Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 8 Accuracy: %f"%variant8Accuracy)
+  print("Method 1 A4S2 Accuracy: %f"%A4S2Accuracy)
 
 
-# Variant 9
+# A5S1
 
 with torch.no_grad():
   totalElements = 0
@@ -1453,12 +1574,12 @@ with torch.no_grad():
 
 
 
-  variant9Accuracy = correctElements/totalElements * 100
+  A5S1Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 9 Accuracy: %f"%variant9Accuracy)
+  print("Method 1 A5S1 Accuracy: %f"%A5S1Accuracy)
 
 
-# Variant 10
+# A5S2
 
 with torch.no_grad():
   totalElements = 0
@@ -1490,15 +1611,88 @@ with torch.no_grad():
 
 
 
-  variant10Accuracy = correctElements/totalElements * 100
+  A5S2Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 10 Accuracy: %f"%variant10Accuracy)
+  print("Method 1 A5S2 Accuracy: %f"%A5S2Accuracy)
+
+# A6S1
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelSupervised(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+
+
+  A6S1Accuracy = correctElements/totalElements * 100
+
+  print("Method 1 A6S1 Accuracy: %f"%A6S1Accuracy)
+
+
+# A6S2
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelKNN.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelKNN(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+
+
+  A6S2Accuracy = correctElements/totalElements * 100
+
+  print("Method 1 A6S2 Accuracy: %f"%A6S2Accuracy)
 
 #####################################################################
 # Check AUROC of network (Method 1)
 # Dataset to check accuracy consist of non-novel label, novel label and actual novel label
 
-# variant 1
+# A1S1
 
 noveltyActualNovel = []
 noveltyPredictedNovel = []
@@ -1535,11 +1729,11 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant1FPR, variant1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
-print("Method 1 Variant 1 AUROC: %f"%variant1AUROC)
+A1S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S1FPR, A1S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+print("Method 1 A1S1 AUROC: %f"%A1S1AUROC)
 
-# variant 2
+# A1S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -1575,12 +1769,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant2FPR, variant2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A1S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S2FPR, A1S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 2 AUROC: %f"%variant2AUROC)
+print("Method 1 A1S2 AUROC: %f"%A1S2AUROC)
 
-# variant 3
+# A2S1
 
 noveltyActualNovel = []
 noveltyPredictedNovel = []
@@ -1617,12 +1811,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant3AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant3FPR, variant3TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S1FPR, A2S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 3 AUROC: %f"%variant3AUROC)
+print("Method 1 A2S1 AUROC: %f"%A2S1AUROC)
 
-# variant 4
+# A2S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -1658,12 +1852,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant4AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant4FPR, variant4TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S2FPR, A2S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 4 AUROC: %f"%variant4AUROC)
+print("Method 1 A2S2 AUROC: %f"%A2S2AUROC)
 
-# variant 5
+# A3S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -1699,12 +1893,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant5AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant5FPR, variant5TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S1FPR, A3S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 5 AUROC: %f"%variant5AUROC)
+print("Method 1 A3S1 AUROC: %f"%A3S1AUROC)
 
-# variant 6
+# A3S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -1740,12 +1934,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant6AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant6FPR, variant6TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S2FPR, A3S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 6 AUROC: %f"%variant6AUROC)
+print("Method 1 A3S2 AUROC: %f"%A3S2AUROC)
 
-# variant 7
+# A4S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -1781,12 +1975,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant7AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant7FPR, variant7TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S1FPR, A4S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 7 AUROC: %f"%variant7AUROC)
+print("Method 1 A4S1 AUROC: %f"%A4S1AUROC)
 
-# variant 8
+# A4S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -1822,12 +2016,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant8AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant8FPR, variant8TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S2FPR, A4S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 1 Variant 8 AUROC: %f"%variant8AUROC)
+print("Method 1 A4S2 AUROC: %f"%A4S2AUROC)
 
-# variant 9
+# A5S1
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -1865,12 +2059,12 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant9AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant9FPR, variant9TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1FPR, A5S1TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Method 1 Variant 9 AUROC: %f"%variant9AUROC)
+print("Method 1 A5S1 AUROC: %f"%A5S1AUROC)
 
-# variant 10
+# A5S2
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -1908,10 +2102,96 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant10AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant10FPR, variant10TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2FPR, A5S2TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Method 1 Variant 10 AUROC: %f"%variant10AUROC)
+print("Method 1 A5S2 AUROC: %f"%A5S2AUROC)
+
+# A6S1
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelSupervised(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S1AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S1FPR, A6S1TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 1 A6S1 AUROC: %f"%A6S1AUROC)
+
+# A6S2
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelKNN.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelKNN(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S2AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S2FPR, A6S2TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 1 A6S2 AUROC: %f"%A6S2AUROC)
 
 #####################################################################
 # Generate AUROC graph
@@ -1922,18 +2202,21 @@ if(not os.path.isdir(os.getcwd() + "/Results/Train1/Method_1_AUROC/") ):
 plt.title("ROC Curve Actual Novel Novelty Estimation")
 plt.xlabel("False Positive Rates")
 plt.ylabel("True Positive Rates")
-plt.plot(variant1FPR, variant1TPR, label = "Variant 1")
-plt.plot(variant2FPR, variant2TPR, label = "Variant 2")
-plt.plot(variant3FPR, variant3TPR, label = "Variant 3")
-plt.plot(variant4FPR, variant4TPR, label = "Variant 4")
-plt.plot(variant5FPR, variant5TPR, label = "Variant 5")
-plt.plot(variant6FPR, variant6TPR, label = "Variant 6")
-plt.plot(variant7FPR, variant7TPR, label = "Variant 7")
-plt.plot(variant8FPR, variant8TPR, label = "Variant 8")
-plt.plot(variant9FPR, variant9TPR, label = "Variant 9")
-plt.plot(variant10FPR, variant10TPR, label = "Variant 10")
+plt.plot(A1S1FPR, A1S1TPR, label = "A1S1")
+plt.plot(A1S2FPR, A1S2TPR, label = "A1S2")
+plt.plot(A2S1FPR, A2S1TPR, label = "A2S1")
+plt.plot(A2S2FPR, A2S2TPR, label = "A2S2")
+plt.plot(A3S1FPR, A3S1TPR, label = "A3S1")
+plt.plot(A3S2FPR, A3S2TPR, label = "A3S2")
+plt.plot(A4S1FPR, A4S1TPR, label = "A4S1")
+plt.plot(A4S2FPR, A4S2TPR, label = "A4S2")
+plt.plot(A5S1FPR, A5S1TPR, label = "A5S1")
+plt.plot(A5S2FPR, A5S2TPR, label = "A5S2")
+plt.plot(A6S1FPR, A6S1TPR, label = "A6S1")
+plt.plot(A6S2FPR, A6S2TPR, label = "A6S2")
 plt.legend()
-plt.savefig(os.getcwd() + "/Results/Train1/Method_1_AUROC/first_autoencoder_AUROC2.png")
+plt.savefig(os.getcwd() + "/Results/Train1/Method_1_AUROC/method_1_AUROC.png")
+plt.clf()
 
 #####################################################################
 # Check accuracy of variants (Method 2)
@@ -1941,13 +2224,13 @@ plt.savefig(os.getcwd() + "/Results/Train1/Method_1_AUROC/first_autoencoder_AURO
 # The label used for testing is similar with the label used to train Siamese Network
 # The data are different, with testing and training dataset
 
-# Variant 1
+# A1S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet .eval()
     decoderNet .eval()
     novelSupervised.eval()
@@ -1973,17 +2256,17 @@ with torch.no_grad():
 
 
 
-  variant1NovelAccuracy = correctElements/totalElements * 100
+  A1S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 1 Accuracy: %f"%variant1NovelAccuracy)
+  print("Method 2 A1S1 Accuracy: %f"%A1S1NovelAccuracy)
 
-# Variant 2
+# A1S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet .eval()
     decoderNet .eval()
     novelKNN.eval()
@@ -2009,17 +2292,17 @@ with torch.no_grad():
 
 
 
-  variant2NovelAccuracy = correctElements/totalElements * 100
+  A1S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 2 Accuracy: %f"%variant2NovelAccuracy)
+  print("Method 2 A1S2 Accuracy: %f"%A1S2NovelAccuracy)
 
-# Variant 3
+# A2S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised .eval()
     decoderNet_supervised .eval()
     novelSupervised.eval()
@@ -2043,17 +2326,17 @@ with torch.no_grad():
 
     totalElements = totalElements + 1
 
-  variant3NovelAccuracy = correctElements/totalElements * 100
+  A2S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 3 Accuracy: %f"%variant3NovelAccuracy)
+  print("Method 2 A2S1 Accuracy: %f"%A2S1NovelAccuracy)
 
-# Variant 4
+# A2S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised .eval()
     decoderNet_supervised .eval()
     novelKNN.eval()
@@ -2079,17 +2362,17 @@ with torch.no_grad():
 
 
 
-  variant4NovelAccuracy = correctElements/totalElements * 100
+  A2S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 4 Accuracy: %f"%variant4NovelAccuracy)
+  print("Method 2 A2S2 Accuracy: %f"%A2S2NovelAccuracy)
 
-# Variant 5
+# A3S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelSupervised.eval()
@@ -2115,17 +2398,17 @@ with torch.no_grad():
 
 
 
-  variant5NovelAccuracy = correctElements/totalElements * 100
+  A3S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 5 Accuracy: %f"%variant5NovelAccuracy)
+  print("Method 2 A3S1 Accuracy: %f"%A3S1NovelAccuracy)
 
-# Variant 6
+# A3S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelKNN.eval()
@@ -2151,17 +2434,17 @@ with torch.no_grad():
 
 
 
-  variant6NovelAccuracy = correctElements/totalElements * 100
+  A3S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 6 Accuracy: %f"%variant6NovelAccuracy)
+  print("Method 2 A3S2 Accuracy: %f"%A3S2NovelAccuracy)
 
-# Variant 7
+# A4S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelSupervised.eval()
@@ -2187,17 +2470,17 @@ with torch.no_grad():
 
 
 
-  variant7NovelAccuracy = correctElements/totalElements * 100
+  A4S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 7 Accuracy: %f"%variant7NovelAccuracy)
+  print("Method 2 A4S1 Accuracy: %f"%A4S1NovelAccuracy)
 
-# Variant 8
+# A4S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelKNN.eval()
@@ -2223,17 +2506,17 @@ with torch.no_grad():
 
 
 
-  variant8NovelAccuracy = correctElements/totalElements * 100
+  A4S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 8 Accuracy: %f"%variant8NovelAccuracy)
+  print("Method 2 A4S2 Accuracy: %f"%A4S2NovelAccuracy)
 
-# Variant 9
+# A5S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelSupervised.eval()
@@ -2259,17 +2542,17 @@ with torch.no_grad():
 
 
 
-  variant9NovelAccuracy = correctElements/totalElements * 100
+  A5S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 9 Accuracy: %f"%variant9NovelAccuracy)
+  print("Method 2 A5S1 Accuracy: %f"%A5S1NovelAccuracy)
 
-# Variant 10
+# A5S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelKNN.eval()
@@ -2295,23 +2578,91 @@ with torch.no_grad():
 
 
 
-  variant10NovelAccuracy = correctElements/totalElements * 100
+  A5S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Method 2 Variant 10 Accuracy: %f"%variant10NovelAccuracy)
+  print("Method 2 A5S2 Accuracy: %f"%A5S2NovelAccuracy)
 
+# A6S1
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelSupervised(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+  A6S1NovelAccuracy = correctElements/totalElements * 100
+
+  print("Method 2 A6S1 Accuracy: %f"%A6S1NovelAccuracy)
+
+
+# A6S2
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelSupervised(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+  A6S2NovelAccuracy = correctElements/totalElements * 100
+
+  print("Method 2 A6S2 Accuracy: %f"%A6S2NovelAccuracy)
 
 #####################################################################
 # Get AUROC for variants
 
 
-# variant 1
+# A1S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet.eval()
     decoderNet.eval()
     novelSupervised.eval()
@@ -2340,13 +2691,13 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant1NovelFPR, variant1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A1S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S1NovelFPR, A1S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 1 AUROC: %f"%variant1NovelAUROC)
+print("Method 2 A1S1 AUROC: %f"%A1S1NovelAUROC)
 
 
-# variant 2
+# A1S2
 
 noveltyActualNovel = []
 noveltyPredictedNovel = []
@@ -2354,7 +2705,7 @@ noveltyPredictedNovel = []
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet.eval()
     decoderNet.eval()
     novelKNN.eval()
@@ -2383,19 +2734,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant2NovelFPR, variant2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A1S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S2NovelFPR, A1S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 2 AUROC: %f"%variant2NovelAUROC)
+print("Method 2 A1S2 AUROC: %f"%A1S2NovelAUROC)
 
-# variant 3
+# A2S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised .eval()
     decoderNet_supervised.eval()
     novelSupervised.eval()
@@ -2424,20 +2775,20 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant3NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant3NovelFPR, variant3NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S1NovelFPR, A2S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 3 AUROC: %f"%variant3NovelAUROC)
+print("Method 2 Variant 3 AUROC: %f"%A2S1NovelAUROC)
 
 
-# variant 4
+# A2S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised.eval()
     decoderNet_supervised.eval()
     novelKNN.eval()
@@ -2466,19 +2817,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant4NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant4NovelFPR, variant4NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S2NovelFPR, A2S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 4 AUROC: %f"%variant4NovelAUROC)
+print("Method 2 A2S2 AUROC: %f"%A2S2NovelAUROC)
 
-# variant 5
+# A3S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelSupervised.eval()
@@ -2507,20 +2858,20 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant5NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant5NovelFPR, variant5NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S1NovelFPR, A3S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 5 AUROC: %f"%variant5NovelAUROC)
+print("Method 2 A3S1 AUROC: %f"%A3S1NovelAUROC)
 
 
-# variant 6
+# A3S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelKNN.eval()
@@ -2549,19 +2900,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant6NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant6NovelFPR, variant6NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S2NovelFPR, A3S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 6 AUROC: %f"%variant6NovelAUROC)
+print("Method 2 A3S2 AUROC: %f"%A3S2NovelAUROC)
 
-# variant 7
+# A4S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelSupervised.eval()
@@ -2590,19 +2941,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant7NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant7NovelFPR, variant7NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S1NovelFPR, A4S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 7 AUROC: %f"%variant7NovelAUROC)
+print("Method 2 A4S1 AUROC: %f"%A4S1NovelAUROC)
 
-# variant 8
+# A4S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelKNN.eval()
@@ -2631,12 +2982,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant8NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant8NovelFPR, variant8NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S2NovelFPR, A4S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Method 2 Variant 8 AUROC: %f"%variant8NovelAUROC)
+print("Method 2 A4S2 AUROC: %f"%A4S2NovelAUROC)
 
-# variant 9
+# A5S1
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -2644,7 +2995,7 @@ forcedNoveltyPredictedLabel = []
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelSupervised.eval()
@@ -2674,12 +3025,12 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant9NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant9NovelFPR, variant9NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1NovelFPR, A5S1NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Method 2 Variant 9 AUROC: %f"%variant9NovelAUROC)
+print("Method 2 A5S1 AUROC: %f"%A5S1NovelAUROC)
 
-# variant 10
+# A5S2
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -2687,7 +3038,7 @@ forcedNoveltyPredictedLabel = []
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelKNN.eval()
@@ -2717,10 +3068,96 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant10NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant10NovelFPR, variant10NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2NovelFPR, A5S2NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Method 2 Variant 10 AUROC: %f"%variant10NovelAUROC)
+print("Method 2 A5S2 AUROC: %f"%A5S2NovelAUROC)
+
+# A6S1
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelSupervised(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S1NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S1NovelFPR, A6S1NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 2 A6S1 AUROC: %f"%A6S1NovelAUROC)
+
+# A6S2
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelKNN.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelKNN(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S2NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S2NovelFPR, A6S2NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 2 A6S2 AUROC: %f"%A6S2NovelAUROC)
 
 #####################################################################
 # Generate AUROC Graph (Method 1)
@@ -2731,51 +3168,58 @@ if(not os.path.isdir(os.getcwd() + "/Results/Train1/Method_2_AUROC/") ):
 plt.title("ROC Curve Novel Class Novelty Estimation")
 plt.xlabel("False Positive Rates")
 plt.ylabel("True Positive Rates")
-plt.plot(variant1FPR, variant1TPR, label = "Variant 1")
-plt.plot(variant2FPR, variant2TPR, label = "Variant 2")
-plt.plot(variant3FPR, variant3TPR, label = "Variant 3")
-plt.plot(variant4FPR, variant4TPR, label = "Variant 4")
-plt.plot(variant5FPR, variant5TPR, label = "Variant 5")
-plt.plot(variant6FPR, variant6TPR, label = "Variant 6")
-plt.plot(variant7FPR, variant7TPR, label = "Variant 7")
-plt.plot(variant8FPR, variant8TPR, label = "Variant 8")
-plt.plot(variant9FPR, variant9TPR, label = "Variant 9")
-plt.plot(variant10FPR, variant10TPR, label = "Variant 10")
+plt.plot(A1S1NovelFPR, A1S1NovelTPR, label = "A1S1")
+plt.plot(A1S2NovelFPR, A1S2NovelTPR, label = "A1S2")
+plt.plot(A2S1NovelFPR, A2S1NovelTPR, label = "A2S1")
+plt.plot(A2S2NovelFPR, A2S2NovelTPR, label = "A2S2")
+plt.plot(A3S1NovelFPR, A3S1NovelTPR, label = "A3S1")
+plt.plot(A3S2NovelFPR, A3S2NovelTPR, label = "A3S2")
+plt.plot(A4S1NovelFPR, A4S1NovelTPR, label = "A4S1")
+plt.plot(A4S2NovelFPR, A4S2NovelTPR, label = "A4S2")
+plt.plot(A5S1NovelFPR, A5S1NovelTPR, label = "A5S1")
+plt.plot(A5S2NovelFPR, A5S2NovelTPR, label = "A5S2")
+plt.plot(A6S1NovelFPR, A6S1NovelTPR, label = "A6S1")
+plt.plot(A6S2NovelFPR, A6S2NovelTPR, label = "A6S2")
 plt.legend()
-plt.savefig(os.getcwd() + "/Results/Train1/Method_2_AUROC/first_autoencoder_novel_AUROC.png")
+plt.savefig(os.getcwd() + "/Results/Train1/Method_2_AUROC/method_2_AUROC.png")
+plt.clf()
 
 #####################################################################
 # Saving data to CSV
 csv_header = [
               " ",
               " ",
-              "Exp Variant 1 Accuracy", 
-              "Exp Variant 2 Accuracy", 
-              "Exp Variant 3 Accuracy", 
-              "Exp Variant 4 Accuracy", 
-              "Exp Variant 5 Accuracy", 
-              "Exp Variant 6 Accuracy", 
-              "Exp Variant 7 Accuracy", 
-              "Exp Variant 8 Accuracy", 
-              "Exp Variant 9 Accuracy", 
-              "Exp Variant 10 Accuracy", 
+              "A1S1 Accuracy", 
+              "A1S2 Accuracy", 
+              "A2S1 Accuracy", 
+              "A2S2 Accuracy", 
+              "A3S1 Accuracy", 
+              "A3S2 Accuracy", 
+              "A4S1 Accuracy", 
+              "A4S2 Accuracy", 
+              "A5S1 Accuracy", 
+              "A5S2 Accuracy", 
+              "A6S1 Accuracy", 
+              "A6S2 Accuracy", 
 
-              "Exp Variant 1 AUROC", 
-              "Exp Variant 2 AUROC", 
-              "Exp Variant 3 AUROC", 
-              "Exp Variant 4 AUROC", 
-              "Exp Variant 5 AUROC", 
-              "Exp Variant 6 AUROC", 
-              "Exp Variant 7 AUROC", 
-              "Exp Variant 8 AUROC", 
-              "Exp Variant 9 AUROC", 
-              "Exp Variant 10 AUROC"
+              "A1S1 AUROC", 
+              "A1S2 AUROC", 
+              "A2S1 AUROC", 
+              "A2S2 AUROC", 
+              "A3S1 AUROC", 
+              "A3S2 AUROC", 
+              "A4S1 AUROC", 
+              "A4S2 AUROC", 
+              "A5S1 AUROC", 
+              "A5S2 AUROC"
+              "A6S1 AUROC"
+              "A6S2 AUROC"
             ]
 outcsv = os.getcwd() + "/Results/FYP_compare.csv"
-if not os.path.exists(outcsv):
-    with open(outcsv, 'w', newline='') as file:
-      writer = csv.writer(file)
-      writer.writerow(csv_header)
+
+with open(outcsv, 'w', newline='') as file:
+  writer = csv.writer(file)
+  writer.writerow(csv_header)
 
 insertData = []
 
@@ -2783,27 +3227,31 @@ rowsCsv = []
 
 rowsCsv.append("Train 1")
 rowsCsv.append("Method 1")
-rowsCsv.append(variant1Accuracy)  
-rowsCsv.append(variant2Accuracy)  
-rowsCsv.append(variant3Accuracy)  
-rowsCsv.append(variant4Accuracy)  
-rowsCsv.append(variant5Accuracy)  
-rowsCsv.append(variant6Accuracy)  
-rowsCsv.append(variant7Accuracy)  
-rowsCsv.append(variant8Accuracy)  
-rowsCsv.append(variant9Accuracy)  
-rowsCsv.append(variant10Accuracy)  
+rowsCsv.append(A1S1Accuracy)  
+rowsCsv.append(A1S2Accuracy)  
+rowsCsv.append(A2S1Accuracy)  
+rowsCsv.append(A2S2Accuracy)  
+rowsCsv.append(A3S1Accuracy)  
+rowsCsv.append(A3S2Accuracy)  
+rowsCsv.append(A4S1Accuracy)  
+rowsCsv.append(A4S2Accuracy)  
+rowsCsv.append(A5S1Accuracy)  
+rowsCsv.append(A5S2Accuracy)  
+rowsCsv.append(A6S1Accuracy)  
+rowsCsv.append(A6S2Accuracy)  
 
-rowsCsv.append(variant1AUROC)
-rowsCsv.append(variant2AUROC)
-rowsCsv.append(variant3AUROC)
-rowsCsv.append(variant4AUROC)
-rowsCsv.append(variant5AUROC)
-rowsCsv.append(variant6AUROC)
-rowsCsv.append(variant7AUROC)
-rowsCsv.append(variant8AUROC)
-rowsCsv.append(variant9AUROC)
-rowsCsv.append(variant10AUROC)
+rowsCsv.append(A1S1AUROC)
+rowsCsv.append(A1S2AUROC)
+rowsCsv.append(A2S1AUROC)
+rowsCsv.append(A2S2AUROC)
+rowsCsv.append(A3S1AUROC)
+rowsCsv.append(A3S2AUROC)
+rowsCsv.append(A4S1AUROC)
+rowsCsv.append(A4S2AUROC)
+rowsCsv.append(A5S1AUROC)
+rowsCsv.append(A5S2AUROC)
+rowsCsv.append(A6S1AUROC)
+rowsCsv.append(A6S2AUROC)
 
 insertData.append(rowsCsv)
 rowsCsv = []
@@ -2811,27 +3259,31 @@ rowsCsv = []
 rowsCsv.append("Train 1")
 rowsCsv.append("Method 2")
 
-rowsCsv.append(variant1NovelAccuracy)  
-rowsCsv.append(variant2NovelAccuracy)  
-rowsCsv.append(variant3NovelAccuracy)  
-rowsCsv.append(variant4NovelAccuracy)  
-rowsCsv.append(variant5NovelAccuracy)  
-rowsCsv.append(variant6NovelAccuracy)  
-rowsCsv.append(variant7NovelAccuracy)  
-rowsCsv.append(variant8NovelAccuracy)  
-rowsCsv.append(variant9NovelAccuracy)  
-rowsCsv.append(variant10NovelAccuracy)  
+rowsCsv.append(A1S1NovelAccuracy)  
+rowsCsv.append(A1S2NovelAccuracy)  
+rowsCsv.append(A2S1NovelAccuracy)  
+rowsCsv.append(A2S2NovelAccuracy)  
+rowsCsv.append(A3S1NovelAccuracy)  
+rowsCsv.append(A3S2NovelAccuracy)  
+rowsCsv.append(A4S1NovelAccuracy)  
+rowsCsv.append(A4S2NovelAccuracy)  
+rowsCsv.append(A5S1NovelAccuracy)  
+rowsCsv.append(A5S2NovelAccuracy)  
+rowsCsv.append(A6S1NovelAccuracy)  
+rowsCsv.append(A6S2NovelAccuracy)  
 
-rowsCsv.append(variant1NovelAUROC)
-rowsCsv.append(variant2NovelAUROC)
-rowsCsv.append(variant3NovelAUROC)
-rowsCsv.append(variant4NovelAUROC)
-rowsCsv.append(variant5NovelAUROC)
-rowsCsv.append(variant6NovelAUROC)
-rowsCsv.append(variant7NovelAUROC)
-rowsCsv.append(variant8NovelAUROC)
-rowsCsv.append(variant9NovelAUROC)
-rowsCsv.append(variant10NovelAUROC)
+rowsCsv.append(A1S1NovelAUROC)
+rowsCsv.append(A1S2NovelAUROC)
+rowsCsv.append(A2S1NovelAUROC)
+rowsCsv.append(A2S2NovelAUROC)
+rowsCsv.append(A3S1NovelAUROC)
+rowsCsv.append(A3S2NovelAUROC)
+rowsCsv.append(A4S1NovelAUROC)
+rowsCsv.append(A4S2NovelAUROC)
+rowsCsv.append(A5S1NovelAUROC)
+rowsCsv.append(A5S2NovelAUROC)
+rowsCsv.append(A6S1NovelAUROC)
+rowsCsv.append(A6S2NovelAUROC)
 
 
 insertData.append(rowsCsv)
@@ -2841,13 +3293,10 @@ with open(outcsv, 'a', newline='', encoding='UTF8') as fileCsv:
 
   writer.writerows(insertData)
 
-
-
-
 #####################################################################
 # Redefining parameter for retraining 
 print("\nRetraining autoencoder\n")
-novelClassCollection = [4, 5, 6]
+novelClassCollection = [0, 1, 2]
 lengthNovelClassCollection = len(novelClassCollection)
 
 actualNovelClass = [3, 4, 5]
@@ -2871,8 +3320,20 @@ from keras.datasets import mnist
 
 #####################################################################
 # Processing dataset for later use
-# Testing dataset, contains all labels
-print("\nProcessing Testing dataset, contains all labels, ie actual, novel and non-novel labels")
+
+# Testing dataset for method 1
+print("\nProcessing Testing dataset 1, contains novel and non-novel labels")
+test_loader_no_actual, test_label_no_actual = processImage(test_X, 
+                                       test_Y, 
+                                       removeNovel = False,
+                                       removeActualNovel = True, 
+                                       novelClassCollection = novelClassCollection,
+                                       actualNovelClass = actualNovelClass,
+                                       classToUse = classToUse
+                                       )
+
+# Testing dataset, contains all labels for method 2
+print("\nProcessing Testing dataset 2, contains all labels, ie actual, novel and non-novel labels")
 test_loader, test_label = processImage(test_X, 
                                        test_Y, 
                                        removeNovel = False,
@@ -2882,8 +3343,9 @@ test_loader, test_label = processImage(test_X,
                                        classToUse = classToUse
                                        )
 
+
 # Training dataset for autoencoder, contains non-novel label only
-print("\nProcessing Train dataset, contains non-novel labels")
+print("\nProcessing Train dataset 1, contains non-novel labels")
 trainData, trainLabel = processImage(train_X, 
                                      train_Y, 
                                      removeNovel = True,
@@ -2894,7 +3356,7 @@ trainData, trainLabel = processImage(train_X,
                                     )
 
 # Training dataset for Siamese Network, contains novel label and non-novel label. Does not have actual novel label
-print("\nProcessing Train dataset, contains novel and non-novel labels")
+print("\nProcessing Train dataset 2, contains novel and non-novel labels")
 trainOtherData, trainOtherLabel = processImage(train_X, 
                                                train_Y, 
                                                removeNovel = False,
@@ -2906,9 +3368,13 @@ trainOtherData, trainOtherLabel = processImage(train_X,
 
 #####################################################################
 # Convert data into tensor
-# Test Data
+# Test Data for method 2
 test_loader = torch.tensor(test_loader)
 test_label = torch.tensor(test_label)
+
+# Testing dataset for method 1
+test_loader_no_actual = torch.tensor(test_loader_no_actual)
+test_label_no_actual = torch.tensor(test_label_no_actual)
 
 # Train Data for Autoencoder
 trainData = torch.tensor(trainData)
@@ -2927,8 +3393,11 @@ trainData2 = TensorDataset(trainData, trainLabel)
 # Train data for Siamese Network
 trainOtherData = TensorDataset(trainOtherData, trainOtherLabel)
 
-# Test Data
+# Test Data for method 2
 test_loader = TensorDataset(test_loader, test_label)
+
+# Test data for method 1
+test_loader_no_actual= TensorDataset(test_loader_no_actual, test_label_no_actual)
 
 #####################################################################
 # Convert tensor dataset into Dataloader, make them into batch sizes, and shuffle
@@ -2948,11 +3417,11 @@ train_loader = DeviceDataLoader(train_loader, device)
 # Train data for Siamese Network
 train_other_loader = DeviceDataLoader(train_other_loader, device)
 
-# Test data with actual novel label, novel label and non-novel label
+# Test data with actual novel label, novel label and non-novel label - method 2
 test_loader = DeviceDataLoader(test_loader, device)
 
-# Test data with novel label and non-novel label
-test_TrainOtherData = DeviceDataLoader(trainOtherData, device) 
+# Test data with novel label and non-novel label - method 1
+test_loader_no_actual= DeviceDataLoader(test_loader_no_actual, device)
 
 #####################################################################
 # get knnImage and knnLabel
@@ -3032,6 +3501,7 @@ for image, label in trainOtherData:
     arrayIndex.append(image)
 
     imageCollectionForAllIndex[label.item()] = arrayIndex
+  
 
 imageCollectionForIndex = []
 otherClassLength = len(train_other_loaderClass)
@@ -3088,6 +3558,12 @@ encoderOp3 = torch.optim.Adam(encoderNet3.parameters(), lr=learning_rate)
 
 decoderNet3 = decoder(latent_space_features, number_of_conv_final_channel, conv_image_size, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
 decoderOp3 = torch.optim.Adam(decoderNet3.parameters(), lr=learning_rate)
+
+encoderNet4 = encoder(number_of_conv_final_channel, latent_space_features, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
+encoderOp4 = torch.optim.Adam(encoderNet4.parameters(), lr=learning_rate)
+
+decoderNet4 = decoder(latent_space_features, number_of_conv_final_channel, conv_image_size, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
+decoderOp4 = torch.optim.Adam(decoderNet4.parameters(), lr=learning_rate)
 
 # Supervised Force Autoencoder COllection
 encoderNet_supervised = encoder(number_of_conv_final_channel, latent_space_features, number_of_channel, conv_output_flatten, kernel_size).float().to(device)
@@ -3163,7 +3639,7 @@ for data in trainData2:
 numberOfClusters3 = 4
 
 print("\nTraining KNN for variant 5 Autoencoder using latent space from normal autoencoder\n")
-knnModel3 = KMeans(n_clusters=numberOfClusters)
+knnModel3 = KMeans(n_clusters=numberOfClusters3)
 
 knnModel3.fit(outputEncoderCollectionKNN)
 
@@ -3234,7 +3710,7 @@ for index in range(numberOfClusters3):
     counter = counter + 1
 
 #####################################################################
-# Get average latent space of autoencoder for training
+# Get average latent space of autoencoder for training Variant 3 autoencoder
 encoderAutoencoderCollection = {
     0:[],
     1:[],
@@ -3279,6 +3755,9 @@ if(os.path.exists(os.getcwd() + "/Data/retrain_normalEncoder.pth") and
     os.path.exists(os.getcwd() + "/Data/retrain_variant5Encoder.pth") and 
     os.path.exists(os.getcwd() + "/Data/retrain_variant5Decoder.pth") and 
 
+    os.path.exists(os.getcwd() + "/Data/retrain_variant6Encoder.pth") and 
+    os.path.exists(os.getcwd() + "/Data/retrain_variant6Decoder.pth") and 
+
     os.path.exists(os.getcwd() + "/Data/retrain_variant2Encoder.pth") and 
     os.path.exists(os.getcwd() + "/Data/retrain_variant2Decoder.pth") and 
 
@@ -3294,6 +3773,9 @@ if(os.path.exists(os.getcwd() + "/Data/retrain_normalEncoder.pth") and
 
   encoderNet3.load_state_dict(torch.load(os.getcwd() + "/Data/retrain_variant5Encoder.pth", map_location=device))
   decoderNet3.load_state_dict(torch.load(os.getcwd() + "/Data/retrain_variant5Decoder.pth", map_location=device))
+
+  encoderNet4.load_state_dict(torch.load(os.getcwd() + "/Data/retrain_variant6Encoder.pth", map_location=device))
+  decoderNet4.load_state_dict(torch.load(os.getcwd() + "/Data/retrain_variant6Decoder.pth", map_location=device))
 
   encoderNet_supervised.load_state_dict(torch.load(os.getcwd() + "/Data/retrain_variant2Encoder.pth", map_location=device))
   decoderNet_supervised.load_state_dict(torch.load(os.getcwd() + "/Data/retrain_variant2Decoder.pth", map_location=device))
@@ -3320,6 +3802,9 @@ else:
 
         encoderNet3.train()
         decoderNet3.train()
+
+        encoderNet4.train()
+        decoderNet4.train()
 
         encoderNet_supervised.train()
         decoderNet_supervised.train()
@@ -3403,6 +3888,33 @@ else:
         lossDecoder_variant5.backward()
         decoderOp3.step()
 
+        # Train the new autoencoder variant 6
+        labelsCollection = generateLabelRepresentation(imgs, encoderNet0, knnModel3)
+        
+        encoderRepresentation = getEncoderLatentCollection(labelsCollection, encoderLatentCollection, device)  # change here
+
+        imageCollection = getImageForEncoderCollection2(labelsCollection, autoencoderTrainImage2, device)
+
+        outEncoder = encoderNet4(imgs)
+
+        lossEncoder_variant6 = nn.functional.mse_loss(outEncoder, encoderRepresentation)
+        
+        encoderOp4.zero_grad()
+        lossEncoder_variant6.backward()
+        encoderOp4.step()
+
+        ## retrain the decoder with fixed latent representation
+        outEncoder = encoderNet4(imgs)
+        outEncoder = outEncoder.detach()
+
+        outDecoder = decoderNet4(outEncoder)
+        imagesCompare = ((0.9 * imageCollection) + (0.1 * imgs)).clamp(0.0,1.0)
+        lossDecoder_variant6 = nn.functional.mse_loss(outDecoder, imagesCompare)
+        
+        decoderOp4.zero_grad()
+        lossDecoder_variant6.backward()
+        decoderOp4.step()
+
 
         ############ train supervised autoencoder
         # variant 2
@@ -3410,48 +3922,48 @@ else:
         encoderRepresentation = getEncoderLatentCollection_supervised(actualLabel, familiarClass, encoderLatentCollection, device)
         imagesCompare = getImageCollectionLabelTrain(actualLabel, train_other_loaderClass, imageCollectionForIndex, device).float()
 
-        outEncoder = encoderNet2_supervised(imgs)
+        outEncoder = encoderNet_supervised(imgs)
 
         lossEncoder_variant2 = nn.functional.mse_loss(outEncoder, encoderRepresentation)
         
-        encoderOp2_supervised.zero_grad()
+        encoderOp_supervised.zero_grad()
         lossEncoder_variant2.backward()
-        encoderOp2_supervised.step()
+        encoderOp_supervised.step()
 
         ## retrain the decoder with fixed latent representation
-        outEncoder = encoderNet2_supervised(imgs)
+        outEncoder = encoderNet_supervised(imgs)
         outEncoder = outEncoder.detach()
 
-        outDecoder = decoderNet2_supervised(outEncoder)
+        outDecoder = decoderNet_supervised(outEncoder)
         imagesCompare = ((0.9 * imagesCompare) + (0.1 * imgs)).clamp(0.0,1.0)
         lossDecoder_variant2 = nn.functional.mse_loss(outDecoder, imagesCompare)
         
-        decoderOp2_supervised.zero_grad()
+        decoderOp_supervised.zero_grad()
         lossDecoder_variant2.backward()
-        decoderOp2_supervised.step()
+        decoderOp_supervised.step()
 
 
         # Train the autoencoder variant 3 - use latent space from autoencoder averaged
         encoderRepresentation = getAutoencoderEncoderRepresentation_supervised(actualLabel, familiarClass, encoderAutoencoderRepresentation, device)
 
-        outEncoder = encoderNet_supervised(imgs)
+        outEncoder = encoderNet2_supervised(imgs)
         lossEncoder_variant3 = nn.functional.mse_loss(outEncoder, encoderRepresentation)
 
-        encoderOp_supervised.zero_grad()
+        encoderOp2_supervised.zero_grad()
         lossEncoder_variant3.backward()
-        encoderOp_supervised.step()
+        encoderOp2_supervised.step()
 
 
-        outEncoder = encoderNet_supervised(imgs)
+        outEncoder = encoderNet2_supervised(imgs)
         outEncoder = outEncoder.detach()
-        outDecoder = decoderNet_supervised(outEncoder)
+        outDecoder = decoderNet2_supervised(outEncoder)
 
         imagesCompare = ((0.9 * imagesCompare) + (0.1 * imgs)).clamp(0.0,1.0)
         lossDecoder_variant3 = nn.functional.mse_loss(outDecoder, imagesCompare)
 
-        decoderOp_supervised.zero_grad()
+        decoderOp2_supervised.zero_grad()
         lossDecoder_variant3.backward()
-        decoderOp_supervised.step()
+        decoderOp2_supervised.step()
 
 
 
@@ -3468,6 +3980,9 @@ else:
 
     print('Epoch {}: Variant 5 Encoder Loss {}'.format(epoch, lossEncoder_variant5))
     print('Epoch {}: Variant 5 Decoder Loss {}'.format(epoch, lossDecoder_variant5))
+
+    print('Epoch {}: Variant 6 Encoder Loss {}'.format(epoch, lossEncoder_variant6))
+    print('Epoch {}: Variant 6 Decoder Loss {}'.format(epoch, lossDecoder_variant6))
   
   # saving model
   torch.save(encoderNet.state_dict(), os.getcwd() + "/Data/retrain_normalEncoder.pth")
@@ -3478,6 +3993,9 @@ else:
 
   torch.save(encoderNet3.state_dict(), os.getcwd() + "/Data/retrain_variant5Encoder.pth")
   torch.save(decoderNet3.state_dict(), os.getcwd() + "/Data/retrain_variant5Decoder.pth")
+
+  torch.save(encoderNet4.state_dict(), os.getcwd() + "/Data/retrain_variant6Encoder.pth")
+  torch.save(decoderNet4.state_dict(), os.getcwd() + "/Data/retrain_variant6Decoder.pth")
 
   torch.save(encoderNet_supervised.state_dict(), os.getcwd() + "/Data/retrain_variant2Encoder.pth")
   torch.save(decoderNet_supervised.state_dict(), os.getcwd() + "/Data/retrain_variant2Decoder.pth")
@@ -3731,10 +4249,58 @@ if(not os.path.isdir(os.getcwd() + "/Results/Train2/Variant_"+autoencoderVariant
 cv2.imwrite(os.getcwd() + "/Results/Train2/Variant_"+autoencoderVariant+"_Autoencoder/results.png", finalImageCollection*255)
 
 #####################################################################
+# Save Variant 6 Autoencoder Input and Output Image in directory for comparision
+print("\nSave Variant 6 Autoencoder Input and Output Image in directory for comparision\n")
+imageLoopStart = 10
+numberOfCompareImage = 10
+autoencoderVariant = "6"
+finalImageCollection = np.array([])
+for index in range(10):
+  imageLabel = index
+  finalImage = np.array([])
+  with torch.no_grad():
+    for imageCompareIndex in range(numberOfCompareImage):
+
+      image= getImageLabel2(imageLabel, imageCompareIndex + imageLoopStart, test_loader).to(device)
+
+
+      encoderNet4.eval()
+      decoderNet4.eval()
+          
+      outputModelIn = image.unsqueeze(0).float().to(device)
+
+      outputEncoderModel = encoderNet4(outputModelIn)
+      outputModel = decoderNet4(outputEncoderModel)
+
+      outputModelShow = outputModel.squeeze(0)
+      imageCompare = image.squeeze(0)
+
+      producedImage = torch.cat((image.to("cpu"), outputModelShow.to("cpu")),2)
+
+      producedImage = producedImage.to("cpu").detach().squeeze(0).squeeze(0).numpy()  
+
+      if(finalImage.shape == np.array([]).shape):
+        finalImage = producedImage
+      else:
+        finalImage = cv2.vconcat([finalImage, producedImage])
+      paddingImage = np.zeros((30, producedImage.shape[1]))
+      finalImage = cv2.vconcat([finalImage, paddingImage])
+
+    if(finalImageCollection.shape == np.array([]).shape):
+      finalImageCollection = finalImage
+    else:
+      finalImageCollection = cv2.hconcat([finalImageCollection, finalImage])
+    paddingImage = np.ones((finalImageCollection.shape[0], 20))
+    finalImageCollection = cv2.hconcat([finalImageCollection, paddingImage])
+if(not os.path.isdir(os.getcwd() + "/Results/Train2/Variant_"+autoencoderVariant+"_Autoencoder") ):
+  os.mkdir(os.getcwd() + "/Results/Train2/Variant_"+autoencoderVariant+"_Autoencoder/")
+cv2.imwrite(os.getcwd() + "/Results/Train2/Variant_"+autoencoderVariant+"_Autoencoder/results.png", finalImageCollection*255)
+
+#####################################################################
 # Check accuracy of network (Method 1)
 # Dataset to check accuracy consist of non-novel label, novel label and actual novel label
 
-# Variant 1 Autoencoder
+# A1S1
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -3763,12 +4329,12 @@ with torch.no_grad():
 
     totalElements = totalElements + 1
 
-  variant1Accuracy = correctElements/totalElements * 100
+  A1S1Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 1 Accuracy: %f"%variant1Accuracy)
+  print("Method 1 A1S1 Accuracy: %f"%A1S1Accuracy)
 
 
-# Variant 2
+# A1S2
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -3799,11 +4365,11 @@ with torch.no_grad():
 
 
 
-  variant2Accuracy = correctElements/totalElements * 100
+  A1S2Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 2 Accuracy: %f"%variant2Accuracy)
+  print("Method 1 A1S2 Accuracy: %f"%A1S2Accuracy)
 
-# Variant 3
+# A2S1
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -3832,11 +4398,11 @@ with torch.no_grad():
 
     totalElements = totalElements + 1
 
-  variant3Accuracy = correctElements/totalElements * 100
+  A2S1Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 3 Accuracy: %f"%variant3Accuracy)
+  print("Method 1 A2S1 Accuracy: %f"%A2S1Accuracy)
 
-# Variant 4
+# A2S2
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
@@ -3867,11 +4433,11 @@ with torch.no_grad():
 
 
 
-  variant4Accuracy = correctElements/totalElements * 100
+  A2S2Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 4 Accuracy: %f"%variant4Accuracy)
+  print("Method 1 A2S2 Accuracy: %f"%A2S2Accuracy)
 
-# Variant 5
+# A3S1
 
 with torch.no_grad():
   totalElements = 0
@@ -3903,11 +4469,11 @@ with torch.no_grad():
 
 
 
-  variant5Accuracy = correctElements/totalElements * 100
+  A3S1Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 5 Accuracy: %f"%variant5Accuracy)
+  print("Method 1 A3S1 Accuracy: %f"%A3S1Accuracy)
 
-# Variant 6
+# A3S2
 
 with torch.no_grad():
   totalElements = 0
@@ -3939,11 +4505,11 @@ with torch.no_grad():
 
 
 
-  variant6Accuracy = correctElements/totalElements * 100
+  A3S2Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 6 Accuracy: %f"%variant6Accuracy)
+  print("Method 1 A3S2 Accuracy: %f"%A3S2Accuracy)
 
-# Variant 7
+# A4S1
 
 with torch.no_grad():
   totalElements = 0
@@ -3975,12 +4541,12 @@ with torch.no_grad():
 
 
 
-  variant7Accuracy = correctElements/totalElements * 100
+  A4S1Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 7 Accuracy: %f"%variant7Accuracy)
+  print("Method 1 A4S1 Accuracy: %f"%A4S1Accuracy)
 
 
-# Variant 8
+# A4S2
 
 with torch.no_grad():
   totalElements = 0
@@ -4012,12 +4578,12 @@ with torch.no_grad():
 
 
 
-  variant8Accuracy = correctElements/totalElements * 100
+  A4S2Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 8 Accuracy: %f"%variant8Accuracy)
+  print("Method 1 A4S2 Accuracy: %f"%A4S2Accuracy)
 
 
-# Variant 9
+# A5S1
 
 with torch.no_grad():
   totalElements = 0
@@ -4049,12 +4615,12 @@ with torch.no_grad():
 
 
 
-  variant9Accuracy = correctElements/totalElements * 100
+  A5S1Accuracy = correctElements/totalElements * 100
 
-  print("Method 1 Variant 9 Accuracy: %f"%variant9Accuracy)
+  print("Method 1 A5S1 Accuracy: %f"%A5S1Accuracy)
 
 
-# Variant 10
+# A5S2
 
 with torch.no_grad():
   totalElements = 0
@@ -4086,15 +4652,88 @@ with torch.no_grad():
 
 
 
-  variant10Accuracy = correctElements/totalElements * 100
+  A5S2Accuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 1 Variant 10 Accuracy: %f"%variant10Accuracy)
+  print("Method 1 A5S2 Accuracy: %f"%A5S2Accuracy)
+
+# A6S1
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelSupervised(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+
+
+  A6S1Accuracy = correctElements/totalElements * 100
+
+  print("Method 1 A6S1 Accuracy: %f"%A6S1Accuracy)
+
+
+# A6S2
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelKNN.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelKNN(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+
+
+  A6S2Accuracy = correctElements/totalElements * 100
+
+  print("Method 1 A6S2 Accuracy: %f"%A6S2Accuracy)
 
 #####################################################################
 # Check AUROC of network (Method 1)
 # Dataset to check accuracy consist of non-novel label, novel label and actual novel label
 
-# variant 1
+# A1S1
 
 noveltyActualNovel = []
 noveltyPredictedNovel = []
@@ -4131,11 +4770,11 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant1FPR, variant1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
-print("Retrain Method 1 Variant 1 AUROC: %f"%variant1AUROC)
+A1S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S1FPR, A1S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+print("Method 1 A1S1 AUROC: %f"%A1S1AUROC)
 
-# variant 2
+# A1S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -4171,12 +4810,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant2FPR, variant2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A1S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S2FPR, A1S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 2 AUROC: %f"%variant2AUROC)
+print("Method 1 A1S2 AUROC: %f"%A1S2AUROC)
 
-# variant 3
+# A2S1
 
 noveltyActualNovel = []
 noveltyPredictedNovel = []
@@ -4213,12 +4852,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant3AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant3FPR, variant3TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S1FPR, A2S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 3 AUROC: %f"%variant3AUROC)
+print("Method 1 A2S1 AUROC: %f"%A2S1AUROC)
 
-# variant 4
+# A2S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -4254,12 +4893,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant4AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant4FPR, variant4TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S2FPR, A2S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 4 AUROC: %f"%variant4AUROC)
+print("Method 1 A2S2 AUROC: %f"%A2S2AUROC)
 
-# variant 5
+# A3S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -4295,12 +4934,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant5AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant5FPR, variant5TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S1FPR, A3S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 5 AUROC: %f"%variant5AUROC)
+print("Method 1 A3S1 AUROC: %f"%A3S1AUROC)
 
-# variant 6
+# A3S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -4336,12 +4975,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant6AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant6FPR, variant6TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S2FPR, A3S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 6 AUROC: %f"%variant6AUROC)
+print("Method 1 A3S2 AUROC: %f"%A3S2AUROC)
 
-# variant 7
+# A4S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -4377,12 +5016,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant7AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant7FPR, variant7TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S1AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S1FPR, A4S1TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 7 AUROC: %f"%variant7AUROC)
+print("Method 1 A4S1 AUROC: %f"%A4S1AUROC)
 
-# variant 8
+# A4S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
@@ -4418,12 +5057,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant8AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant8FPR, variant8TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S2AUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S2FPR, A4S2TPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 1 Variant 8 AUROC: %f"%variant8AUROC)
+print("Method 1 A4S2 AUROC: %f"%A4S2AUROC)
 
-# variant 9
+# A5S1
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -4461,12 +5100,12 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant9AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant9FPR, variant9TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1FPR, A5S1TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Retrain Method 1 Variant 9 AUROC: %f"%variant9AUROC)
+print("Method 1 A5S1 AUROC: %f"%A5S1AUROC)
 
-# variant 10
+# A5S2
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -4504,32 +5143,121 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant10AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant10FPR, variant10TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2FPR, A5S2TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Retrain Method 1 Variant 10 AUROC: %f"%variant10AUROC)
+print("Method 1 A5S2 AUROC: %f"%A5S2AUROC)
+
+# A6S1
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelSupervised(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S1AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S1FPR, A6S1TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 1 A6S1 AUROC: %f"%A6S1AUROC)
+
+# A6S2
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelKNN.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelKNN(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S2AUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S2FPR, A6S2TPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 1 A6S2 AUROC: %f"%A6S2AUROC)
 
 #####################################################################
 # Generate AUROC graph
 print("\nGenerating AUROC graph for Method 1\n")
-if(not os.path.isdir(os.getcwd() + "/Results/Train2/Method_1_AUROC/") ):
-  os.mkdir(os.getcwd() + "/Results/Train2/Method_1_AUROC/")
+if(not os.path.isdir(os.getcwd() + "/Results/Train1/Method_1_AUROC/") ):
+  os.mkdir(os.getcwd() + "/Results/Train1/Method_1_AUROC/")
 
 plt.title("ROC Curve Actual Novel Novelty Estimation")
 plt.xlabel("False Positive Rates")
 plt.ylabel("True Positive Rates")
-plt.plot(variant1FPR, variant1TPR, label = "Variant 1")
-plt.plot(variant2FPR, variant2TPR, label = "Variant 2")
-plt.plot(variant3FPR, variant3TPR, label = "Variant 3")
-plt.plot(variant4FPR, variant4TPR, label = "Variant 4")
-plt.plot(variant5FPR, variant5TPR, label = "Variant 5")
-plt.plot(variant6FPR, variant6TPR, label = "Variant 6")
-plt.plot(variant7FPR, variant7TPR, label = "Variant 7")
-plt.plot(variant8FPR, variant8TPR, label = "Variant 8")
-plt.plot(variant9FPR, variant9TPR, label = "Variant 9")
-plt.plot(variant10FPR, variant10TPR, label = "Variant 10")
+plt.plot(A1S1FPR, A1S1TPR, label = "A1S1")
+plt.plot(A1S2FPR, A1S2TPR, label = "A1S2")
+plt.plot(A2S1FPR, A2S1TPR, label = "A2S1")
+plt.plot(A2S2FPR, A2S2TPR, label = "A2S2")
+plt.plot(A3S1FPR, A3S1TPR, label = "A3S1")
+plt.plot(A3S2FPR, A3S2TPR, label = "A3S2")
+plt.plot(A4S1FPR, A4S1TPR, label = "A4S1")
+plt.plot(A4S2FPR, A4S2TPR, label = "A4S2")
+plt.plot(A5S1FPR, A5S1TPR, label = "A5S1")
+plt.plot(A5S2FPR, A5S2TPR, label = "A5S2")
+plt.plot(A6S1FPR, A6S1TPR, label = "A6S1")
+plt.plot(A6S2FPR, A6S2TPR, label = "A6S2")
 plt.legend()
-plt.savefig(os.getcwd() + "/Results/Train2/Method_1_AUROC/first_autoencoder_AUROC2.png")
+plt.savefig(os.getcwd() + "/Results/Train2/Method_1_AUROC/method_1_AUROC.png")
+plt.clf()
 
 #####################################################################
 # Check accuracy of variants (Method 2)
@@ -4537,13 +5265,13 @@ plt.savefig(os.getcwd() + "/Results/Train2/Method_1_AUROC/first_autoencoder_AURO
 # The label used for testing is similar with the label used to train Siamese Network
 # The data are different, with testing and training dataset
 
-# Variant 1
+# A1S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet .eval()
     decoderNet .eval()
     novelSupervised.eval()
@@ -4569,17 +5297,17 @@ with torch.no_grad():
 
 
 
-  variant1NovelAccuracy = correctElements/totalElements * 100
+  A1S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 1 Accuracy: %f"%variant1NovelAccuracy)
+  print("Method 2 A1S1 Accuracy: %f"%A1S1NovelAccuracy)
 
-# Variant 2
+# A1S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet .eval()
     decoderNet .eval()
     novelKNN.eval()
@@ -4605,17 +5333,17 @@ with torch.no_grad():
 
 
 
-  variant2NovelAccuracy = correctElements/totalElements * 100
+  A1S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 2 Accuracy: %f"%variant2NovelAccuracy)
+  print("Method 2 A1S2 Accuracy: %f"%A1S2NovelAccuracy)
 
-# Variant 3
+# A2S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised .eval()
     decoderNet_supervised .eval()
     novelSupervised.eval()
@@ -4639,17 +5367,17 @@ with torch.no_grad():
 
     totalElements = totalElements + 1
 
-  variant3NovelAccuracy = correctElements/totalElements * 100
+  A2S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 3 Accuracy: %f"%variant3NovelAccuracy)
+  print("Method 2 A2S1 Accuracy: %f"%A2S1NovelAccuracy)
 
-# Variant 4
+# A2S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised .eval()
     decoderNet_supervised .eval()
     novelKNN.eval()
@@ -4675,17 +5403,17 @@ with torch.no_grad():
 
 
 
-  variant4NovelAccuracy = correctElements/totalElements * 100
+  A2S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 4 Accuracy: %f"%variant4NovelAccuracy)
+  print("Method 2 A2S2 Accuracy: %f"%A2S2NovelAccuracy)
 
-# Variant 5
+# A3S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelSupervised.eval()
@@ -4711,17 +5439,17 @@ with torch.no_grad():
 
 
 
-  variant5NovelAccuracy = correctElements/totalElements * 100
+  A3S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 5 Accuracy: %f"%variant5NovelAccuracy)
+  print("Method 2 A3S1 Accuracy: %f"%A3S1NovelAccuracy)
 
-# Variant 6
+# A3S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelKNN.eval()
@@ -4747,17 +5475,17 @@ with torch.no_grad():
 
 
 
-  variant6NovelAccuracy = correctElements/totalElements * 100
+  A3S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 6 Accuracy: %f"%variant6NovelAccuracy)
+  print("Method 2 A3S2 Accuracy: %f"%A3S2NovelAccuracy)
 
-# Variant 7
+# A4S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelSupervised.eval()
@@ -4783,17 +5511,17 @@ with torch.no_grad():
 
 
 
-  variant7NovelAccuracy = correctElements/totalElements * 100
+  A4S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 7 Accuracy: %f"%variant7NovelAccuracy)
+  print("Method 2 A4S1 Accuracy: %f"%A4S1NovelAccuracy)
 
-# Variant 8
+# A4S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelKNN.eval()
@@ -4819,17 +5547,17 @@ with torch.no_grad():
 
 
 
-  variant8NovelAccuracy = correctElements/totalElements * 100
+  A4S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 8 Accuracy: %f"%variant8NovelAccuracy)
+  print("Method 2 A4S2 Accuracy: %f"%A4S2NovelAccuracy)
 
-# Variant 9
+# A5S1
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelSupervised.eval()
@@ -4855,17 +5583,17 @@ with torch.no_grad():
 
 
 
-  variant9NovelAccuracy = correctElements/totalElements * 100
+  A5S1NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 9 Accuracy: %f"%variant9NovelAccuracy)
+  print("Method 2 A5S1 Accuracy: %f"%A5S1NovelAccuracy)
 
-# Variant 10
+# A5S2
 
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
 
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelKNN.eval()
@@ -4891,23 +5619,91 @@ with torch.no_grad():
 
 
 
-  variant10NovelAccuracy = correctElements/totalElements * 100
+  A5S2NovelAccuracy = correctElements/totalElements * 100
 
-  print("Retrain Method 2 Variant 10 Accuracy: %f"%variant10NovelAccuracy)
+  print("Method 2 A5S2 Accuracy: %f"%A5S2NovelAccuracy)
 
+# A6S1
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelSupervised(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+  A6S1NovelAccuracy = correctElements/totalElements * 100
+
+  print("Method 2 A6S1 Accuracy: %f"%A6S1NovelAccuracy)
+
+
+# A6S2
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+
+    imageIn = decoderNet4(outputEncoder)
+    
+    out1, out2 = novelSupervised(img,imageIn)
+
+    distance = F.pairwise_distance(out1, out2)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    if(checkNovelAccuracy(distance,novelLabel)):
+      correctElements = correctElements + 1
+
+    totalElements = totalElements + 1
+
+  A6S2NovelAccuracy = correctElements/totalElements * 100
+
+  print("Method 2 A6S2 Accuracy: %f"%A6S2NovelAccuracy)
 
 #####################################################################
 # Get AUROC for variants
 
 
-# variant 1
+# A1S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet.eval()
     decoderNet.eval()
     novelSupervised.eval()
@@ -4936,13 +5732,13 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant1NovelFPR, variant1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A1S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S1NovelFPR, A1S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 1 AUROC: %f"%variant1NovelAUROC)
+print("Method 2 A1S1 AUROC: %f"%A1S1NovelAUROC)
 
 
-# variant 2
+# A1S2
 
 noveltyActualNovel = []
 noveltyPredictedNovel = []
@@ -4950,7 +5746,7 @@ noveltyPredictedNovel = []
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet.eval()
     decoderNet.eval()
     novelKNN.eval()
@@ -4979,19 +5775,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant2NovelFPR, variant2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A1S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A1S2NovelFPR, A1S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 2 AUROC: %f"%variant2NovelAUROC)
+print("Method 2 A1S2 AUROC: %f"%A1S2NovelAUROC)
 
-# variant 3
+# A2S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised .eval()
     decoderNet_supervised.eval()
     novelSupervised.eval()
@@ -5020,20 +5816,20 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant3NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant3NovelFPR, variant3NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S1NovelFPR, A2S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 3 AUROC: %f"%variant3NovelAUROC)
+print("Method 2 Variant 3 AUROC: %f"%A2S1NovelAUROC)
 
 
-# variant 4
+# A2S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet_supervised.eval()
     decoderNet_supervised.eval()
     novelKNN.eval()
@@ -5062,19 +5858,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant4NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant4NovelFPR, variant4NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A2S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A2S2NovelFPR, A2S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 4 AUROC: %f"%variant4NovelAUROC)
+print("Method 2 A2S2 AUROC: %f"%A2S2NovelAUROC)
 
-# variant 5
+# A3S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelSupervised.eval()
@@ -5103,20 +5899,20 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant5NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant5NovelFPR, variant5NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S1NovelFPR, A3S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 5 AUROC: %f"%variant5NovelAUROC)
+print("Method 2 A3S1 AUROC: %f"%A3S1NovelAUROC)
 
 
-# variant 6
+# A3S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2_supervised .eval()
     decoderNet2_supervised .eval()
     novelKNN.eval()
@@ -5145,19 +5941,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant6NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant6NovelFPR, variant6NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A3S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A3S2NovelFPR, A3S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 6 AUROC: %f"%variant6NovelAUROC)
+print("Method 2 A3S2 AUROC: %f"%A3S2NovelAUROC)
 
-# variant 7
+# A4S1
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelSupervised.eval()
@@ -5186,19 +5982,19 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant7NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant7NovelFPR, variant7NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S1NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S1NovelFPR, A4S1NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 7 AUROC: %f"%variant7NovelAUROC)
+print("Method 2 A4S1 AUROC: %f"%A4S1NovelAUROC)
 
-# variant 8
+# A4S2
 noveltyActualNovel = []
 noveltyPredictedNovel = []
 
 
 with torch.no_grad():
   
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet2 .eval()
     decoderNet2 .eval()
     novelKNN.eval()
@@ -5227,12 +6023,12 @@ with torch.no_grad():
 
     noveltyPredictedNovel.append(outputNovelLabel[0])
 
-variant8NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
-variant8NovelFPR, variant8NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
+A4S2NovelAUROC = roc_auc_score(noveltyActualNovel,noveltyPredictedNovel)
+A4S2NovelFPR, A4S2NovelTPR, _ = roc_curve(noveltyActualNovel,noveltyPredictedNovel)
 
-print("Retrain Method 2 Variant 8 AUROC: %f"%variant8NovelAUROC)
+print("Method 2 A4S2 AUROC: %f"%A4S2NovelAUROC)
 
-# variant 9
+# A5S1
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -5240,7 +6036,7 @@ forcedNoveltyPredictedLabel = []
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelSupervised.eval()
@@ -5270,12 +6066,12 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant9NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant9NovelFPR, variant9NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S1NovelFPR, A5S1NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Retrain Method 2 Variant 9 AUROC: %f"%variant9NovelAUROC)
+print("Method 2 A5S1 AUROC: %f"%A5S1NovelAUROC)
 
-# variant 10
+# A5S2
 # check accuracy of trained model~!
 forcedNoveltyActualLabel = []
 forcedNoveltyPredictedLabel = []
@@ -5283,7 +6079,7 @@ forcedNoveltyPredictedLabel = []
 with torch.no_grad():
   totalElements = 0
   correctElements = 0
-  for idx, data in enumerate(test_TrainOtherData, 0):
+  for idx, data in enumerate(test_loader_no_actual, 0):
     encoderNet3.eval()
     decoderNet3.eval()
     novelKNN.eval()
@@ -5313,35 +6109,125 @@ with torch.no_grad():
     forcedNoveltyPredictedLabel.append(finalModelNovel[0])
 
     
-variant10NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
-variant10NovelFPR, variant10NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A5S2NovelFPR, A5S2NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
 
-print("Retrain Method 2 Variant 10 AUROC: %f"%variant10NovelAUROC)
+print("Method 2 A5S2 AUROC: %f"%A5S2NovelAUROC)
+
+# A6S1
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelSupervised.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelSupervised(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S1NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S1NovelFPR, A6S1NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 2 A6S1 AUROC: %f"%A6S1NovelAUROC)
+
+# A6S2
+# check accuracy of trained model~!
+forcedNoveltyActualLabel = []
+forcedNoveltyPredictedLabel = []
+
+with torch.no_grad():
+  totalElements = 0
+  correctElements = 0
+  for idx, data in enumerate(test_loader_no_actual, 0):
+    encoderNet4.eval()
+    decoderNet4.eval()
+    novelKNN.eval()
+
+    img, label = data
+
+    img = img.to(device).float().unsqueeze(0)
+
+    outputEncoder = encoderNet4(img)
+    outputEncoder = outputEncoder.detach()
+
+    outputDecoder = decoderNet4(outputEncoder)
+
+    novelLabel = genNovelOrNotOnLabel([label], actualNovelClass, novelClassCollection)
+
+    out1, out2 = novelKNN(img,outputDecoder)
+
+    outputNovelLabel = F.pairwise_distance(out1, out2)
+
+    finalModelNovel = outputNovelLabel.to("cpu").numpy()
+
+    finalModelNovel = finalModelNovel.tolist()
+
+
+    forcedNoveltyActualLabel.append(novelLabel[0])
+
+    forcedNoveltyPredictedLabel.append(finalModelNovel[0])
+
+    
+A6S2NovelAUROC = roc_auc_score(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+A6S2NovelFPR, A6S2NovelTPR, _ = roc_curve(forcedNoveltyActualLabel,forcedNoveltyPredictedLabel)
+
+print("Method 2 A6S2 AUROC: %f"%A6S2NovelAUROC)
 
 #####################################################################
 # Generate AUROC Graph (Method 1)
 print("\nGenerating AUROC graph for Method 2\n")
-if(not os.path.isdir(os.getcwd() + "/Results/Train2/Method_2_AUROC/") ):
-  os.mkdir(os.getcwd() + "/Results/Train2/Method_2_AUROC/")
+if(not os.path.isdir(os.getcwd() + "/Results/Train1/Method_2_AUROC/") ):
+  os.mkdir(os.getcwd() + "/Results/Train1/Method_2_AUROC/")
 
 plt.title("ROC Curve Novel Class Novelty Estimation")
 plt.xlabel("False Positive Rates")
 plt.ylabel("True Positive Rates")
-plt.plot(variant1FPR, variant1TPR, label = "Variant 1")
-plt.plot(variant2FPR, variant2TPR, label = "Variant 2")
-plt.plot(variant3FPR, variant3TPR, label = "Variant 3")
-plt.plot(variant4FPR, variant4TPR, label = "Variant 4")
-plt.plot(variant5FPR, variant5TPR, label = "Variant 5")
-plt.plot(variant6FPR, variant6TPR, label = "Variant 6")
-plt.plot(variant7FPR, variant7TPR, label = "Variant 7")
-plt.plot(variant8FPR, variant8TPR, label = "Variant 8")
-plt.plot(variant9FPR, variant9TPR, label = "Variant 9")
-plt.plot(variant10FPR, variant10TPR, label = "Variant 10")
+plt.plot(A1S1NovelFPR, A1S1NovelTPR, label = "A1S1")
+plt.plot(A1S2NovelFPR, A1S2NovelTPR, label = "A1S2")
+plt.plot(A2S1NovelFPR, A2S1NovelTPR, label = "A2S1")
+plt.plot(A2S2NovelFPR, A2S2NovelTPR, label = "A2S2")
+plt.plot(A3S1NovelFPR, A3S1NovelTPR, label = "A3S1")
+plt.plot(A3S2NovelFPR, A3S2NovelTPR, label = "A3S2")
+plt.plot(A4S1NovelFPR, A4S1NovelTPR, label = "A4S1")
+plt.plot(A4S2NovelFPR, A4S2NovelTPR, label = "A4S2")
+plt.plot(A5S1NovelFPR, A5S1NovelTPR, label = "A5S1")
+plt.plot(A5S2NovelFPR, A5S2NovelTPR, label = "A5S2")
+plt.plot(A6S1NovelFPR, A6S1NovelTPR, label = "A6S1")
+plt.plot(A6S2NovelFPR, A6S2NovelTPR, label = "A6S2")
 plt.legend()
-plt.savefig(os.getcwd() + "/Results/Train2/Method_2_AUROC/first_autoencoder_novel_AUROC.png")
+plt.savefig(os.getcwd() + "/Results/Train2/Method_2_AUROC/method_2_AUROC.png")
+plt.clf()
 
 #####################################################################
-# Save data to CSV file
+# Saving data to CSV
+outcsv = os.getcwd() + "/Results/FYP_compare.csv"
 
 insertData = []
 
@@ -5349,27 +6235,31 @@ rowsCsv = []
 
 rowsCsv.append("Train 2")
 rowsCsv.append("Method 1")
-rowsCsv.append(variant1Accuracy)  
-rowsCsv.append(variant2Accuracy)  
-rowsCsv.append(variant3Accuracy)  
-rowsCsv.append(variant4Accuracy)  
-rowsCsv.append(variant5Accuracy)  
-rowsCsv.append(variant6Accuracy)  
-rowsCsv.append(variant7Accuracy)  
-rowsCsv.append(variant8Accuracy)  
-rowsCsv.append(variant9Accuracy)  
-rowsCsv.append(variant10Accuracy)  
+rowsCsv.append(A1S1Accuracy)  
+rowsCsv.append(A1S2Accuracy)  
+rowsCsv.append(A2S1Accuracy)  
+rowsCsv.append(A2S2Accuracy)  
+rowsCsv.append(A3S1Accuracy)  
+rowsCsv.append(A3S2Accuracy)  
+rowsCsv.append(A4S1Accuracy)  
+rowsCsv.append(A4S2Accuracy)  
+rowsCsv.append(A5S1Accuracy)  
+rowsCsv.append(A5S2Accuracy)  
+rowsCsv.append(A6S1Accuracy)  
+rowsCsv.append(A6S2Accuracy)  
 
-rowsCsv.append(variant1AUROC)
-rowsCsv.append(variant2AUROC)
-rowsCsv.append(variant3AUROC)
-rowsCsv.append(variant4AUROC)
-rowsCsv.append(variant5AUROC)
-rowsCsv.append(variant6AUROC)
-rowsCsv.append(variant7AUROC)
-rowsCsv.append(variant8AUROC)
-rowsCsv.append(variant9AUROC)
-rowsCsv.append(variant10AUROC)
+rowsCsv.append(A1S1AUROC)
+rowsCsv.append(A1S2AUROC)
+rowsCsv.append(A2S1AUROC)
+rowsCsv.append(A2S2AUROC)
+rowsCsv.append(A3S1AUROC)
+rowsCsv.append(A3S2AUROC)
+rowsCsv.append(A4S1AUROC)
+rowsCsv.append(A4S2AUROC)
+rowsCsv.append(A5S1AUROC)
+rowsCsv.append(A5S2AUROC)
+rowsCsv.append(A6S1AUROC)
+rowsCsv.append(A6S2AUROC)
 
 insertData.append(rowsCsv)
 rowsCsv = []
@@ -5377,27 +6267,31 @@ rowsCsv = []
 rowsCsv.append("Train 2")
 rowsCsv.append("Method 2")
 
-rowsCsv.append(variant1NovelAccuracy)  
-rowsCsv.append(variant2NovelAccuracy)  
-rowsCsv.append(variant3NovelAccuracy)  
-rowsCsv.append(variant4NovelAccuracy)  
-rowsCsv.append(variant5NovelAccuracy)  
-rowsCsv.append(variant6NovelAccuracy)  
-rowsCsv.append(variant7NovelAccuracy)  
-rowsCsv.append(variant8NovelAccuracy)  
-rowsCsv.append(variant9NovelAccuracy)  
-rowsCsv.append(variant10NovelAccuracy)  
+rowsCsv.append(A1S1NovelAccuracy)  
+rowsCsv.append(A1S2NovelAccuracy)  
+rowsCsv.append(A2S1NovelAccuracy)  
+rowsCsv.append(A2S2NovelAccuracy)  
+rowsCsv.append(A3S1NovelAccuracy)  
+rowsCsv.append(A3S2NovelAccuracy)  
+rowsCsv.append(A4S1NovelAccuracy)  
+rowsCsv.append(A4S2NovelAccuracy)  
+rowsCsv.append(A5S1NovelAccuracy)  
+rowsCsv.append(A5S2NovelAccuracy)  
+rowsCsv.append(A6S1NovelAccuracy)  
+rowsCsv.append(A6S2NovelAccuracy)  
 
-rowsCsv.append(variant1NovelAUROC)
-rowsCsv.append(variant2NovelAUROC)
-rowsCsv.append(variant3NovelAUROC)
-rowsCsv.append(variant4NovelAUROC)
-rowsCsv.append(variant5NovelAUROC)
-rowsCsv.append(variant6NovelAUROC)
-rowsCsv.append(variant7NovelAUROC)
-rowsCsv.append(variant8NovelAUROC)
-rowsCsv.append(variant9NovelAUROC)
-rowsCsv.append(variant10NovelAUROC)
+rowsCsv.append(A1S1NovelAUROC)
+rowsCsv.append(A1S2NovelAUROC)
+rowsCsv.append(A2S1NovelAUROC)
+rowsCsv.append(A2S2NovelAUROC)
+rowsCsv.append(A3S1NovelAUROC)
+rowsCsv.append(A3S2NovelAUROC)
+rowsCsv.append(A4S1NovelAUROC)
+rowsCsv.append(A4S2NovelAUROC)
+rowsCsv.append(A5S1NovelAUROC)
+rowsCsv.append(A5S2NovelAUROC)
+rowsCsv.append(A6S1NovelAUROC)
+rowsCsv.append(A6S2NovelAUROC)
 
 
 insertData.append(rowsCsv)
@@ -5406,7 +6300,6 @@ with open(outcsv, 'a', newline='', encoding='UTF8') as fileCsv:
   writer = csv.writer(fileCsv)
 
   writer.writerows(insertData)
-
 print("Done")
 
 # if __name__ == '__main__':
