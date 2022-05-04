@@ -84,4 +84,21 @@ Note: if you already have Python 3.7.10 installed, and for the subsequent runnin
 ```
 python main.py
 ```
+This code runs evaluation over the entire MNIST dataset, for 2 runs, using Method 1 and 2.
+
+## To run individual test code
+Test code can test for autoencoder variant 1 to 6. <br .>
+Test code can test for siamese variant 1 to 2. <br />
+If other input or no input is detected, autoencoder variant 1 and siamese variant 1 is used as default.<br />
+
+``` 
+python main2.py --autoencoder 1 --siamese 1
+```
+
+Make sure to place test image in the right directory. The image should be named as "test.png"
+<br />
+Image Directory: 
+```
+Main2_Test_Image/test.png
+```
 

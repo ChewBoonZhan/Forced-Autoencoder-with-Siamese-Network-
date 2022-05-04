@@ -120,23 +120,11 @@ lengthClassToUse = len(classToUse)
 
 ## set the novel and familiar class to be random
 
-# lengthNovelClassCollection = 3
-# novelClassCollection = []
-# for index in range(lengthNovelClassCollection):
-#   randomInt = random.randint(0, lengthClassToUse-1)
-#   while randomInt in novelClassCollection:
-#     randomInt = random.randint(0, lengthClassToUse-1)
-#   novelClassCollection.append(randomInt)
+
 novelClassCollection = [4, 5, 6]
 lengthNovelClassCollection = len(novelClassCollection)
 
-# lengthActualNovelClass = 3
-# actualNovelClass = []
-# for index in range(lengthActualNovelClass):
-#   randomInt = random.randint(0, lengthClassToUse-1)
-#   while (randomInt in novelClassCollection) or (randomInt in actualNovelClass):
-#     randomInt = random.randint(0, lengthClassToUse-1)
-#   actualNovelClass.append(randomInt)
+
 actualNovelClass = [7, 8, 9]
 lengthActualNovelClass = len(actualNovelClass)
 
